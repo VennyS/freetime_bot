@@ -1,2 +1,4 @@
-secret_token.py
+data.py
+/PostreSQL_scripts
+/__pycache__
 .idea/
