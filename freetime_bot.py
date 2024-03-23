@@ -28,7 +28,7 @@ def handle_start(message):
         # Замыкание для передачик параметра группы в обработчик колбэк запросов
         bot.callback_query_handler(func=lambda call: call.data in ["Yes", "No"])(create_callback_handler(groupname))
 
-        send_actions_keyboard(message.chat_id)
+        send_actions_keyboard(message.chat.id)
     else: 
         bot.reply_to(message, f"Привет, я бот для определения общего времени для группы людей.")
         if ...: # Если пользователь зарегестрирован в БД, то выводить доп.информацию не нужно
