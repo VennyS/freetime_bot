@@ -51,10 +51,12 @@ def create_callback_handler(groupname):
         if call.data == "Yes":
             # Написать логику проверки такой группы в базе
             # Также проверки возможно этот пользователь уже в этой группе и тд
-            bot.send_message(call.message.chat.id, f"Вы присоединились к группе - {groupname}.")
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text=f"Вы присоединились к группе - {groupname}.")
             send_actions_keyboard(call.message.chat.id)
         elif call.data == "No":
-            bot.send_message(call.message.chat.id, f"Вы отклонили предложение на вступление в группу -  {groupname}.")
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text=f"Вы отклонили предложение на вступление в группу -  {groupname}.")
             send_actions_keyboard(call.message.chat.id)
     return handle_callback
 
