@@ -1,7 +1,8 @@
 import telebot
 from telebot import types
 import data
-from Massages import *
+from messages import *
+import queries
 
 bot = telebot.TeleBot(data.token)
 waiting_for_groupname = {}
@@ -24,23 +25,72 @@ def send_entery_group_keyboard(chat_id, groupname):
 def create_callback_handler(groupname): # Обработчик колбэк запроса с параметром группы
     def handle_callback(call): # Функция обработки колбэк запроса
         if call.data == "Yes":
-                                                                                                                        # Написать логику проверки такой группы в базе
-                                                                                                                        # Также проверки возможно этот пользователь уже в этой группе и тд
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                  text=f"Вы присоединились к группе - {groupname}.")
+            # Логика регистрации группы
+            response = team(call, groupname)
+            match (response):
+                case "Вступил":
+                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=f"Вы успешно вступили в группу {groupname}.")
+                case "Ошибка":
+                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="Ошибка при попытке вступить в группу.")
+                case "Состоит":
+                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text=f"Вы уже состоите в группе {groupname}.")
+                case "Отсутствует":
+                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Такая группа либо не существует, либо уже удалена.")
+            
             send_main_keyboard(call.message.chat.id)
         elif call.data == "No":
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                  text=f"Вы отклонили предложение на вступление в группу -  {groupname}.")
+                                  text=f"Вы отклонили предложение на вступление в группу — {groupname}.")
             send_main_keyboard(call.message.chat.id)
     return handle_callback
+
+# Метод проверки и регистрации пользователя
+def register(message):
+    user = queries.is_telegramid_exist(telegramid = message.from_user.id)
+    if isinstance(user, Exception):
+        bot.send_message(message.chat.id,  ERROR_MESSAGE)
+        return False
+    else:     
+        if (not user):
+            queries.register(telegramid = message.from_user.id)
+            # Если только что зарегался
+            return True
+        
+# Метод проверки на существование группы и регистрации пользователя в ней        
+def team(call, name):
+    group = queries.is_team_exists(name)
+    # Если группа существует
+    if (group):
+        # Если пользовать не состоит в этой группе
+        if (not queries.is_user_joined(call.from_user.id, name)):
+            # Если регистрация прошла успешно
+            if (queries.registerInGroup(call.from_user.id, name)):
+                return "Вступил"
+            else:
+                return "Ошибка"
+        # Если пользовать уже состоит в этой группе
+        else: 
+            return "Состоит"
+    # Если группа не существует            
+    else: 
+        return "Отсутствует"
+
 
 @bot.message_handler(commands=['start']) # Обработчик команды /start или перехода по ссылке
 def handle_start(message): 
     # Разделяем команду и параметры 
-    args = message.text.split() 
-    # Проверяем, есть ли параметр после /start
-                                                                                                                        # Реализовать проверку регистрации пользователя. Если не зареган - зарегать.
+    args = message.text.split()
+
+    firstTime = register(message)
+
+    # Проверка наличия пользователя в БД
+    user = queries.is_telegramid_exist(telegramid = message.from_user.id)
+    if isinstance(user, Exception):
+        bot.send_message(message.chat.id,  ERROR_MESSAGE)
+    else:     
+        if (not user): queries.register(telegramid = message.from_user.id)
+
+    # Проверяем, есть ли параметр после /start. [Переход по ссылке]
     if len(args) > 1: 
         groupname = args[1] # Получаем параметр
 
@@ -48,17 +98,14 @@ def handle_start(message):
 
         # Замыкание для передачи параметра группы в обработчик колбэк запросов
         bot.callback_query_handler(func=lambda call: call.data in ["Yes", "No"])(create_callback_handler(groupname))
-
+    # Если /start без ссылки
     else:
         bot.reply_to(message, HELLO_MESSAGE)
-        if ...:                                                                                                         # Если пользователь зарегестрирован в БД, то выводить доп.информацию не нужно
+        # Если пользователь только что зарегистрировался, то нужно вывести доп.информацию
+        if (firstTime):
             send_help(message)
 
-
         send_main_keyboard(message.chat.id)
-
-def groupname_exists(groupname): # Функция проверки существования такой группы в БД
-    return True                                                                                                         # логика проверки есть ли группа в базе с таким названием
 
 @bot.message_handler(commands=['help']) # Обработчик команды /help
 def send_help(message): # Функция вывода описания бота (Используется также при команде /start, если пользователь не зареган)
