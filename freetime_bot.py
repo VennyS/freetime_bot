@@ -26,7 +26,7 @@ def send_entery_group_keyboard(chat_id, groupname):
     bot.send_message(chat_id, f"Ты хочешь вступить в группу {groupname}?", reply_markup=keyboard)
 
 # Обработчик колбэк запроса с параметром группы
-def create_callback_handler(groupname): 
+def create_callback_handler(groupname):
     def handle_callback(call): # Функция обработки колбэк запроса
         if call.data == "Yes":
             # Логика регистрации группы
@@ -52,13 +52,13 @@ def register(message):
     if isinstance(user, Exception):
         bot.send_message(message.chat.id,  ERROR_MESSAGE)
         return False
-    else:     
+    else:
         if (not user):
             queries.register(telegramid = message.from_user.id)
             # Если только что зарегался
             return True
-        
-# Метод проверки на существование группы и регистрации пользователя в ней        
+
+# Метод проверки на существование группы и регистрации пользователя в ней
 def team(call, name):
     group = queries.is_team_exists(name)
     # Если группа существует
@@ -71,17 +71,17 @@ def team(call, name):
             else:
                 return "Ошибка"
         # Если пользовать уже состоит в этой группе
-        else: 
+        else:
             return "Состоит"
-    # Если группа не существует            
-    else: 
+    # Если группа не существует
+    else:
         return "Отсутствует"
 
 # Обработчик команды /start или перехода по ссылке
 # Есть вопросы! Надо обработать любой текст сюда же
-@bot.message_handler(commands=['start']) 
-def handle_start(message): 
-    # Разделяем команду и параметры 
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    # Разделяем команду и параметры
     args = message.text.split()
 
     firstTime = register(message)
@@ -90,11 +90,11 @@ def handle_start(message):
     user = queries.is_telegramid_exist(telegramid = message.from_user.id)
     if isinstance(user, Exception):
         bot.send_message(message.chat.id,  ERROR_MESSAGE)
-    else:     
+    else:
         if (not user): queries.register(telegramid = message.from_user.id)
 
     # Проверяем, есть ли параметр после /start. [Переход по ссылке]
-    if len(args) > 1: 
+    if len(args) > 1:
         groupname = args[1] # Получаем параметр
 
         send_entery_group_keyboard(message.chat.id, groupname)
@@ -111,55 +111,61 @@ def handle_start(message):
         send_main_keyboard(message.chat.id)
 
 # Обработчик команды /help
-@bot.message_handler(commands=['help']) 
+@bot.message_handler(commands=['help'])
 def send_help(message): # Функция вывода описания бота (Используется также при команде /start, если пользователь не зареган)
     bot.send_message(message.chat.id,  HELP_MESSAGE)
 
 # Обработчик колбэк запроса на кнопу info
 # Надо доработать
-@bot.callback_query_handler(func=lambda call: call.data == "Info") 
+@bot.callback_query_handler(func=lambda call: call.data == "Info")
 def handle_info_callback(call):
     bot.send_message(call.message.chat.id, "Список групп с ссылками, а также какая либо служебная информаци")
 
 # Обработчик колбэка на создание новой группы
-# Надо доработать.
-@bot.callback_query_handler(func=lambda call: call.data == "CreateGroup") 
-def handle_create_group_callback(call):                                                                                 
+@bot.callback_query_handler(func=lambda call: call.data == "CreateGroup")
+def handle_create_group_callback(call):
     keyboard = types.InlineKeyboardMarkup()
     cancelButton = types.InlineKeyboardButton(text="Отмена", callback_data="Cancel")
     keyboard.add(cancelButton)
-    bot.send_message(call.message.chat.id, TEAM_NAME_MESSAGE, reply_markup=keyboard)
-    # Устанавливаем состояние ожидания названия группы
-    waiting_for_groupname[call.message.chat.id] = True
+    # Сообщение пользователя, которое передается в validTeamName
+    mesg = bot.send_message(call.message.chat.id, TEAM_NAME_MESSAGE, reply_markup=keyboard)
+    bot.register_next_step_handler(mesg, validTeamName)
 
-# Обработчик колбэка на ввод названия новой группы
-# Надо доработать. Добавить шифрование
-@bot.message_handler(func=lambda message: waiting_for_groupname.get(message.chat.id))
-def handle_groupname_input(message):
-    groupname = message.text
+def handle_create_group_callback2(message):
+    keyboard = types.InlineKeyboardMarkup()
+    cancelButton = types.InlineKeyboardButton(text="Отмена", callback_data="Cancel")
+    keyboard.add(cancelButton)
+    # Сообщение пользователя, которое передается в validTeamName
+    mesg = bot.send_message(message.chat.id, TEAM_NAME_MESSAGE, reply_markup=keyboard)
+    bot.register_next_step_handler(mesg, validTeamName)
 
-    
-    if queries.is_team_exists(groupname): # Функция проверки существования такой группы
-        bot.send_message(message.chat.id, "Группа с таким названием уже существует. Попробуйте еще раз")
+# Проверка существование группы
+def validTeamName(message):
+    if not queries.is_team_exists(message.text):
+        queries.createGroup(message.text)
+        # добавляем пользователя в группу после её создания
+        queries.registerInGroup(message.from_user.id, message.text)
+        bot.send_message(message.chat.id, f"Группа с именем {message.text} создана "
+                                          f"\nСсылка на вступления в группу: {generateLink(queries.md5_lower_32bit(message.text))}")
+    else:
+        bot.send_message(message.chat.id, f"Группа с именем {message.text} уже существует. Попробуйте ещё раз")
+        handle_create_group_callback2(message)
 
-    # Удаляем состояние ожидания названия группы
-    waiting_for_groupname.pop(message.chat.id)
-    # Логика создания ссылки а также шифрование
+# Создаем ссылку
+def generateLink(name): return f"https://t.me/schledule_bot?start={name}"
 
 # Колбэк на отмену создания новой группы
-@bot.callback_query_handler(func=lambda call: call.data == "Cancel") 
+@bot.callback_query_handler(func=lambda call: call.data == "Cancel")
 def handle_cancel_callback(call):
     # Отменяем текущее действие
+    # Нужно что-то сделать с тем, что оно остаётся
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Создание новой группы отменено")
-    # Удаляем состояние ожидания названия группы
-    waiting_for_groupname.pop(call.message.chat.id)
 
 # Обработчик колбэка на нажатия на кнопку редактирнования интервалов
 # Тут вообще пиздец
 @bot.callback_query_handler(func=lambda call: call.data == "Intervals")
 def handle_info_callback(call):
     bot.send_message(call.message.chat.id, "Открытие web приложения")
-
 
 # Запуск бота
 if __name__=='__main__':

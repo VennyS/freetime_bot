@@ -1,6 +1,8 @@
 # Импортируем объект pool
 from connection_pool import pool
 
+import hashlib
+
 # Регистрация пользователя
 def register(telegramid, pool = pool):
     conn = pool.get_connection()
@@ -79,3 +81,33 @@ def registerInGroup(telegramid, name, pool = pool):
     # Отдаем подключение обратно в пулл
     finally:
         pool.put_connection(conn)
+
+# Зашифровывает название группы
+def md5_lower_32bit(name):
+    # Вычисляем хеш MD5
+    hash_md5 = hashlib.md5(name.encode())
+
+    # Получаем 16-битное значение хеша
+    hash_value = hash_md5.digest()
+
+    # Переводим в строку и возвращаем в нижнем регистре
+    return hash_value.hex()
+
+# Добавляет группу и её хэш в таблицу team
+def createGroup(name, pool = pool):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    # Пробуем сделать запрос
+    try:
+        cursor.execute(f"INSERT INTO team(name, hash) VALUES ('{name}', '{md5_lower_32bit(name)}')")
+        conn.commit()
+        return True
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
+
+
+
