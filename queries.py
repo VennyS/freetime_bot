@@ -6,7 +6,6 @@ def register(telegramid, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
-    print(f"INSERT INTO user_info(telegramid) VALUES ({telegramid})")
     try:
         cursor.execute(f"INSERT INTO user_info(telegramid) VALUES ({telegramid})")
         conn.commit()
@@ -19,7 +18,6 @@ def register(telegramid, pool = pool):
         pool.put_connection(conn)
 
 # Функция для проверки наличия telegramid в БД
-# Пример ее использования в файле usingquery.py
 def is_telegramid_exist(telegramid, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
@@ -50,6 +48,7 @@ def is_team_exists(name, pool = pool):
     finally:
         pool.put_connection(conn)
 
+# Проверка состоит ли пользователь в группе
 def is_user_joined(telegramid, name, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
@@ -57,7 +56,6 @@ def is_user_joined(telegramid, name, pool = pool):
     try:
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM view_member WHERE telegramid = {telegramid} AND name = '{name}')")
         isExist = cursor.fetchone()[0]
-        print(isExist)
         return isExist
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
