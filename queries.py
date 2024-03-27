@@ -110,7 +110,7 @@ def createGroup(name, pool = pool):
         pool.put_connection(conn)
 
 # Получаем все группы в которых состоит пользователь
-def get_groups_list_of_user(telegramid, pool = pool):
+def get_groups_list_of_user_with_hash(telegramid, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
@@ -119,8 +119,8 @@ def get_groups_list_of_user(telegramid, pool = pool):
                        f"FROM team JOIN member ON team.id = member.teamid "
                        f"JOIN user_info ON member.userid = user_info.id "
                        f"WHERE user_info.telegramid = {telegramid};")
-        list_of_users_group = cursor.fetchall()
-        return list_of_users_group
+        list_of_users_groups_with_hash = cursor.fetchall()
+        return list_of_users_groups_with_hash
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
         return e
@@ -128,4 +128,18 @@ def get_groups_list_of_user(telegramid, pool = pool):
     finally:
         pool.put_connection(conn)
 
+def get_groups_list_of_user(telegramid, pool=pool):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    # Пробуем сделать запрос
+    try:
+        cursor.execute(f"SELECT name FROM view_member WHERE telegramid = {telegramid}")
+        list_of_users_groups = cursor.fetchall()
+        return list_of_users_groups
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
 

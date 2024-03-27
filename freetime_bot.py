@@ -121,8 +121,8 @@ def handle_info_callback(call):
 @bot.callback_query_handler(func=lambda call: call.data in  ["ManageGroups", "Back_from_creatingGroup"])
 def handle_create_group_callback(call):
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(keyboards.createGroupButton, keyboards.backButton)
-    list_of_groups = queries.get_groups_list_of_user(call.from_user.id)
+    keyboard.add(keyboards.createGroupButton,keyboards.chooseGroupButton, keyboards.backButton)
+    list_of_groups = queries.get_groups_list_of_user_with_hash(call.from_user.id)
     # Преобразование списка в строку формата "название группы - ссылка"
     formatted_groups = '\n'.join([f'{group[0]} - {generateLink(group[1])}' for group in list_of_groups])
     # chat_id = call.message.chat.id, message_id = call.message.message_id, text = "Создание новой группы отменено"
@@ -136,6 +136,7 @@ def handle_create_group_callback(call):
         )
     else:
         bot.send_message(call.message.chat.id, 'Ты пока не состоишь в какой-либо группе')
+        send_main_keyboard(call.message.chat.id)
 
 # Обработчик колбэка на создание новой группы
 @bot.callback_query_handler(func=lambda call: call.data in ["CreateGroup"])
@@ -174,7 +175,7 @@ def validTeamName(message):
 def generateLink(name): return f"https://t.me/schledule_bot?start={name}"
 
 def get_list_of_groups_with_links_from_db_of_user(user_id):
-    list_of_groups = queries.get_groups_list_of_user(user_id)
+    list_of_groups = queries.get_groups_list_of_user_with_hash(user_id)
     # Преобразование списка в строку формата "название группы - ссылка"
     formatted_groups = '\n'.join([f'{group[0]} - {generateLink(group[1])}' for group in list_of_groups])
     return formatted_groups
@@ -201,6 +202,30 @@ def handle_cancel_callback(call):
     # Нужно что-то сделать с тем, что оно остаётся
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Создание новой группы отменено")
 
+# Обработчик наажания на кнопку Выбрать, то есть выбор группы для дальнейших действий именно с этой группой
+@bot.callback_query_handler(func=lambda call: call.data == "chooseGroup")
+def handle_choose_group_callback(call):
+    groupList = queries.get_groups_list_of_user(call.from_user.id)
+    if groupList:
+        formatted_groupList = [item[0] for item in groupList] # список из строк
+        keyboard = types.InlineKeyboardMarkup()
+        keyboard.row_width = 1
+        for group in formatted_groupList:
+            keyboard.add(types.InlineKeyboardButton(group, callback_data=f'group_{group}'))
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f'Выбери нужную для упарвления группу:\n',
+            reply_markup=keyboard
+        )
+    else:
+        bot.send_message(call.message.chat.id, text= 'ди нахуй вообще лох')
+# Обработчик для выбранной группы
+# Благодаря startswitch мы отслеживаем начинается ли строка с заданной
+@bot.callback_query_handler(func=lambda call: call.data.startswith("group_"))
+def handle_chosen_group_callback(call):
+    chosen_group = call.data.split('_', 1)[1] # Достаем название выбранной группы
+    bot.send_message(call.message.chat.id, text=f'Вы выбрали группу: {chosen_group}')
 # Обработчик колбэка на нажатия на кнопку редактирнования интервалов
 # Тут вообще пиздец
 @bot.callback_query_handler(func=lambda call: call.data == "Intervals")
@@ -212,4 +237,3 @@ if __name__=='__main__':
     print(bot.get_me())
     bot.polling(none_stop=True)
 
-    # Сделать так чтобы после нажатия на кнопку назад эти кнопки пропадали
