@@ -5,16 +5,15 @@ from messages import *
 import queries
 
 bot = telebot.TeleBot(data.token)
-waiting_for_groupname = {}
 
 # Функция для вывода основного выбора действий
 # ЕСТЬ ВОПРОСЫ! Убрать кнопку Новая группа, вставить ее в INFO
 def send_main_keyboard(chat_id):
     keyboard = types.InlineKeyboardMarkup()
     sendInfoButton = types.InlineKeyboardButton(text="INFO", callback_data="Info")
-    createGroupButton = types.InlineKeyboardButton(text="Новая группа", callback_data="CreateGroup")
+    manageGroupsButton = types.InlineKeyboardButton(text="Группы", callback_data="ManageGroups")
     intervalsEditingButton = types.InlineKeyboardButton(text="Доступность", callback_data="Intervals")
-    keyboard.add(intervalsEditingButton, createGroupButton, sendInfoButton)
+    keyboard.add(intervalsEditingButton, manageGroupsButton, sendInfoButton)
     bot.send_message(chat_id, "Выберите действие:", reply_markup=keyboard)
 
 # Клавиатура для вступления в группу
@@ -87,11 +86,11 @@ def handle_start(message):
     firstTime = register(message)
 
     # Проверка наличия пользователя в БД
-    user = queries.is_telegramid_exist(telegramid = message.from_user.id)
+    user = queries.is_telegramid_exist(telegramid=message.from_user.id)
     if isinstance(user, Exception):
         bot.send_message(message.chat.id,  ERROR_MESSAGE)
     else:
-        if (not user): queries.register(telegramid = message.from_user.id)
+        if (not user): queries.register(telegramid=message.from_user.id)
 
     # Проверяем, есть ли параметр после /start. [Переход по ссылке]
     if len(args) > 1:
@@ -120,6 +119,20 @@ def send_help(message): # Функция вывода описания бота 
 @bot.callback_query_handler(func=lambda call: call.data == "Info")
 def handle_info_callback(call):
     bot.send_message(call.message.chat.id, "Список групп с ссылками, а также какая либо служебная информаци")
+
+@bot.callback_query_handler(func=lambda call: call.data == "ManageGroups")
+def handle_create_group_callback(call):
+    keyboard = types.InlineKeyboardMarkup()
+    createGroupButton = types.InlineKeyboardButton(text="Новая группа", callback_data="CreateGroup")
+    keyboard.add(createGroupButton)
+    list_of_groups = queries.get_groups_list_of_user(call.from_user.id)
+    # Преобразование списка в строку формата "название группы - ссылка"
+    formatted_groups = '\n'.join([f'{group[0]} - {generateLink(group[1])}' for group in list_of_groups])
+
+    # Отправка сообщения с отформатированным списком групп
+    bot.send_message(call.message.chat.id, f'Это группы, в которых ты состоишь:\n{formatted_groups}',
+                     reply_markup=keyboard)
+
 
 # Обработчик колбэка на создание новой группы
 @bot.callback_query_handler(func=lambda call: call.data == "CreateGroup")
