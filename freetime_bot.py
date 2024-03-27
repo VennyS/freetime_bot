@@ -3,6 +3,7 @@ from telebot import types
 import data
 from messages import *
 import queries
+import keyboards
 
 bot = telebot.TeleBot(data.token)
 
@@ -10,10 +11,7 @@ bot = telebot.TeleBot(data.token)
 # ЕСТЬ ВОПРОСЫ! Убрать кнопку Новая группа, вставить ее в INFO
 def send_main_keyboard(chat_id):
     keyboard = types.InlineKeyboardMarkup()
-    sendInfoButton = types.InlineKeyboardButton(text="INFO", callback_data="Info")
-    manageGroupsButton = types.InlineKeyboardButton(text="Группы", callback_data="ManageGroups")
-    intervalsEditingButton = types.InlineKeyboardButton(text="Доступность", callback_data="Intervals")
-    keyboard.add(intervalsEditingButton, manageGroupsButton, sendInfoButton)
+    keyboard.add(keyboards.intervalsEditingButton, keyboards.manageGroupsButton, keyboards.sendInfoButton)
     bot.send_message(chat_id, "Выберите действие:", reply_markup=keyboard)
 
 # Клавиатура для вступления в группу
@@ -120,26 +118,32 @@ def send_help(message): # Функция вывода описания бота 
 def handle_info_callback(call):
     bot.send_message(call.message.chat.id, "Список групп с ссылками, а также какая либо служебная информаци")
 
-@bot.callback_query_handler(func=lambda call: call.data == "ManageGroups")
+@bot.callback_query_handler(func=lambda call: call.data in  ["ManageGroups", "Back_from_creatingGroup"])
 def handle_create_group_callback(call):
     keyboard = types.InlineKeyboardMarkup()
-    createGroupButton = types.InlineKeyboardButton(text="Новая группа", callback_data="CreateGroup")
-    keyboard.add(createGroupButton)
+    keyboard.add(keyboards.createGroupButton, keyboards.backButton)
     list_of_groups = queries.get_groups_list_of_user(call.from_user.id)
     # Преобразование списка в строку формата "название группы - ссылка"
     formatted_groups = '\n'.join([f'{group[0]} - {generateLink(group[1])}' for group in list_of_groups])
-
+    # chat_id = call.message.chat.id, message_id = call.message.message_id, text = "Создание новой группы отменено"
     # Отправка сообщения с отформатированным списком групп
-    bot.send_message(call.message.chat.id, f'Это группы, в которых ты состоишь:\n{formatted_groups}',
-                     reply_markup=keyboard)
-
+    if formatted_groups:
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text=f'Это группы, в которых ты состоишь:\n{formatted_groups}',
+            reply_markup=keyboard
+        )
+    else:
+        bot.send_message(call.message.chat.id, 'Ты пока не состоишь в какой-либо группе')
 
 # Обработчик колбэка на создание новой группы
-@bot.callback_query_handler(func=lambda call: call.data == "CreateGroup")
+@bot.callback_query_handler(func=lambda call: call.data in ["CreateGroup"])
 def handle_create_group_callback(call):
     keyboard = types.InlineKeyboardMarkup()
     cancelButton = types.InlineKeyboardButton(text="Отмена", callback_data="Cancel")
-    keyboard.add(cancelButton)
+    backButton = types.InlineKeyboardButton(text='Назад', callback_data="Back_from_creatingGroup")
+    keyboard.add(cancelButton, backButton)
     # Сообщение пользователя, которое передается в validTeamName
     mesg = bot.send_message(call.message.chat.id, TEAM_NAME_MESSAGE, reply_markup=keyboard)
     bot.register_next_step_handler(mesg, validTeamName)
@@ -158,14 +162,37 @@ def validTeamName(message):
         queries.createGroup(message.text)
         # добавляем пользователя в группу после её создания
         queries.registerInGroup(message.from_user.id, message.text)
-        bot.send_message(message.chat.id, f"Группа с именем {message.text} создана "
+        bot.send_message(message.chat.id, f"Группа с именем «{message.text}» создана "
                                           f"\nСсылка на вступления в группу: {generateLink(queries.md5_lower_32bit(message.text))}")
+        send_main_keyboard(message.chat.id)
     else:
         bot.send_message(message.chat.id, f"Группа с именем {message.text} уже существует. Попробуйте ещё раз")
         handle_create_group_callback2(message)
 
+
 # Создаем ссылку
 def generateLink(name): return f"https://t.me/schledule_bot?start={name}"
+
+def get_list_of_groups_with_links_from_db_of_user(user_id):
+    list_of_groups = queries.get_groups_list_of_user(user_id)
+    # Преобразование списка в строку формата "название группы - ссылка"
+    formatted_groups = '\n'.join([f'{group[0]} - {generateLink(group[1])}' for group in list_of_groups])
+    return formatted_groups
+@bot.callback_query_handler(func=lambda call: call.data == "Back_to_main_menu")
+def handle_GoBack_callback(call):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(keyboards.sendInfoButton, keyboards.manageGroupsButton, keyboards.intervalsEditingButton)
+
+    groups_of_user = get_list_of_groups_with_links_from_db_of_user(call.from_user.id)
+    if groups_of_user:
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f'Это группы, в которых ты состоишь:\n{groups_of_user}'
+        )
+    else:
+        bot.send_message(call.message.chat.id, 'Ты пока не состоишь в какой-либо группе')
+    bot.send_message(call.message.chat.id, text='Выберите действие:',   reply_markup=keyboard)
 
 # Колбэк на отмену создания новой группы
 @bot.callback_query_handler(func=lambda call: call.data == "Cancel")
@@ -184,3 +211,5 @@ def handle_info_callback(call):
 if __name__=='__main__':
     print(bot.get_me())
     bot.polling(none_stop=True)
+
+    # Сделать так чтобы после нажатия на кнопку назад эти кнопки пропадали

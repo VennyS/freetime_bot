@@ -109,6 +109,7 @@ def createGroup(name, pool = pool):
     finally:
         pool.put_connection(conn)
 
+# Получаем все группы в которых состоит пользователь
 def get_groups_list_of_user(telegramid, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
