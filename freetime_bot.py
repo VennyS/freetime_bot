@@ -13,8 +13,7 @@ bot = telebot.TeleBot(data.token)
 # ЕСТЬ ВОПРОСЫ! Убрать кнопку Новая группа, вставить ее в INFO
 def send_main_keyboard(chat_id):
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.manageGroupsButton,
-                 keyboardsButtons.sendInfoButton, keyboardsButtons.createGroupButton)
+    keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.manageGroupsButton, keyboardsButtons.createGroupButton)
     bot.send_message(chat_id, "Выберите действие:", reply_markup=keyboard)
 
 # Клавиатура для вступления в группу
@@ -30,7 +29,7 @@ def create_callback_handler(groupname):
     def handle_callback(call): # Функция обработки колбэк запроса
         if call.data == "Yes":
             # Логика регистрации группы
-            response = team(call, groupname)
+            response = isTeamExistnadUserInIt(call, groupname)
             match (response):
                 case "Вступил":
                     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=f"Вы успешно вступили в группу {groupname}.")
@@ -59,7 +58,7 @@ def register(message):
             return True
 
 # Метод проверки на существование группы и регистрации пользователя в ней
-def team(call, name):
+def isTeamExistnadUserInIt(call, name):
     group = queries.is_team_exists(name)
     # Если группа существует
     if (group):
@@ -117,9 +116,9 @@ def send_help(message): # Функция вывода описания бота 
 
 # Обработчик колбэк запроса на кнопу info
 # Надо доработать
-@bot.callback_query_handler(func=lambda call: call.data == "Info")
-def handle_info_callback(call):
-    bot.send_message(call.message.chat.id, "Список групп с ссылками, а также какая либо служебная информаци")
+# @bot.callback_query_handler(func=lambda call: call.data == "Info")
+# def handle_info_callback(call):
+#     bot.send_message(call.message.chat.id, "Список групп с ссылками, а также какая либо служебная информаци")
 
 @bot.callback_query_handler(func=lambda call: call.data in  ["ManageGroups"])
 def handle_manage_group_callback(call):
@@ -175,6 +174,7 @@ def validTeamName(message):
     else:
         bot.send_message(message.chat.id, f"Группа с именем {message.text} уже существует. Попробуйте ещё раз")
         handle_create_group_callback2(message)
+        # добавить кнопки подтверждения ввода другого названия группы (Да - повторить ввод названия новой группы, нет - нет)
 
 
 # Обработчик наажания на кнопку Выбрать, то есть выбор группы для дальнейших действий именно с ней
@@ -205,17 +205,13 @@ def handle_chosen_group_callback(call):
 # Обработка кнопок Назад
 @bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_creating_group", "Back_to_main_menu_from_manage_group"])
 def handle_goBack_from_creatingGroup(call):
-    match(call.data):
-        case "Back_to_main_menu_from_creating_group:":
-            bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
-            GoBack(call)
-        case "Back_to_main_menu_from_manage_group":
-            GoBack()
+    bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
+    GoBack(call)
 
 # Обработчик колбэка на нажатия на кнопку редактирнования интервалов
 # Тут вообще пиздец
 @bot.callback_query_handler(func=lambda call: call.data == "Intervals")
-def handle_info_callback(call):
+def handle_web_callback(call):
     bot.send_message(call.message.chat.id, "Открытие web приложения")
 
 # Запуск бота

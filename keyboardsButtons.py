@@ -1,7 +1,7 @@
 from telebot import types
 
 
-sendInfoButton = types.InlineKeyboardButton(text="INFO", callback_data="Info")
+# sendInfoButton = types.InlineKeyboardButton(text="INFO", callback_data="Info")
 manageGroupsButton = types.InlineKeyboardButton(text="Группы", callback_data="ManageGroups")
 intervalsEditingButton = types.InlineKeyboardButton(text="Доступность", callback_data="Intervals")
 
