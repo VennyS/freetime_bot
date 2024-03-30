@@ -6,6 +6,8 @@ manageGroupsButton = types.InlineKeyboardButton(text="Группы", callback_da
 intervalsEditingButton = types.InlineKeyboardButton(text="Доступность", callback_data="Intervals")
 
 createGroupButton = types.InlineKeyboardButton(text="Создать новую", callback_data="CreateGroup")
-backButton = types.InlineKeyboardButton(text="Назад", callback_data="Back_to_main_menu")
+backButtonFromCreatingGroupToMain = types.InlineKeyboardButton(text="Назад", callback_data="Back_to_main_menu_from_creating_group")
 
 chooseGroupButton = types.InlineKeyboardButton(text="Выбрать", callback_data="chooseGroup")
+backButtonFromManageGroupTOMain = types.InlineKeyboardButton(text='Назад', callback_data="Back_to_main_menu_from_manage_group")
+

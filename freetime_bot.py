@@ -3,7 +3,9 @@ from telebot import types
 import data
 from messages import *
 import queries
-import keyboards
+import keyboardsButtons
+from GoBack_methods import *
+import functions_
 
 bot = telebot.TeleBot(data.token)
 
@@ -11,7 +13,8 @@ bot = telebot.TeleBot(data.token)
 # ЕСТЬ ВОПРОСЫ! Убрать кнопку Новая группа, вставить ее в INFO
 def send_main_keyboard(chat_id):
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(keyboards.intervalsEditingButton, keyboards.manageGroupsButton, keyboards.sendInfoButton)
+    keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.manageGroupsButton,
+                 keyboardsButtons.sendInfoButton, keyboardsButtons.createGroupButton)
     bot.send_message(chat_id, "Выберите действие:", reply_markup=keyboard)
 
 # Клавиатура для вступления в группу
@@ -118,33 +121,35 @@ def send_help(message): # Функция вывода описания бота 
 def handle_info_callback(call):
     bot.send_message(call.message.chat.id, "Список групп с ссылками, а также какая либо служебная информаци")
 
-@bot.callback_query_handler(func=lambda call: call.data in  ["ManageGroups", "Back_from_creatingGroup"])
-def handle_create_group_callback(call):
-    keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(keyboards.createGroupButton,keyboards.chooseGroupButton, keyboards.backButton)
-    list_of_groups = queries.get_groups_list_of_user_with_hash(call.from_user.id)
-    # Преобразование списка в строку формата "название группы - ссылка"
-    formatted_groups = '\n'.join([f'{group[0]} - {generateLink(group[1])}' for group in list_of_groups])
-    # chat_id = call.message.chat.id, message_id = call.message.message_id, text = "Создание новой группы отменено"
-    # Отправка сообщения с отформатированным списком групп
-    if formatted_groups:
-        bot.edit_message_text(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-            text=f'Это группы, в которых ты состоишь:\n{formatted_groups}',
-            reply_markup=keyboard
-        )
-    else:
-        bot.send_message(call.message.chat.id, 'Ты пока не состоишь в какой-либо группе')
-        send_main_keyboard(call.message.chat.id)
+@bot.callback_query_handler(func=lambda call: call.data in  ["ManageGroups"])
+def handle_manage_group_callback(call):
+        keyboard = types.InlineKeyboardMarkup()
+        keyboard.add(keyboardsButtons.createGroupButton,keyboardsButtons.chooseGroupButton,
+                     keyboardsButtons.backButtonFromManageGroupTOMain)
+        list_of_groups = queries.get_groups_list_of_user_with_hash(call.from_user.id)
+        # Преобразование списка в строку формата "название группы - ссылка"
+        formatted_groups = '\n'.join([f'{group[0]} - {functions_.generateLink(group[1])}' for group in list_of_groups])
+        # chat_id = call.message.chat.id, message_id = call.message.message_id, text = "Создание новой группы отменено"
+        # Отправка сообщения с отформатированным списком групп
+        if formatted_groups:
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+                text=f'Это группы, в которых ты состоишь:\n{formatted_groups}',
+                reply_markup=keyboard
+            )
+        else:
+            bot.send_message(call.message.chat.id, 'Ты пока не состоишь в какой-либо группе')
+            send_main_keyboard(call.message.chat.id)
 
+        # нужно для того, чтобы бот больше не ожидал следующего шага в виде названия новой группы
+        # bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
+        # GoBack(call)
 # Обработчик колбэка на создание новой группы
 @bot.callback_query_handler(func=lambda call: call.data in ["CreateGroup"])
 def handle_create_group_callback(call):
     keyboard = types.InlineKeyboardMarkup()
-    cancelButton = types.InlineKeyboardButton(text="Отмена", callback_data="Cancel")
-    backButton = types.InlineKeyboardButton(text='Назад', callback_data="Back_from_creatingGroup")
-    keyboard.add(cancelButton, backButton)
+    keyboard.add(keyboardsButtons.backButtonFromCreatingGroupToMain)
     # Сообщение пользователя, которое передается в validTeamName
     mesg = bot.send_message(call.message.chat.id, TEAM_NAME_MESSAGE, reply_markup=keyboard)
     bot.register_next_step_handler(mesg, validTeamName)
@@ -164,45 +169,15 @@ def validTeamName(message):
         # добавляем пользователя в группу после её создания
         queries.registerInGroup(message.from_user.id, message.text)
         bot.send_message(message.chat.id, f"Группа с именем «{message.text}» создана "
-                                          f"\nСсылка на вступления в группу: {generateLink(queries.md5_lower_32bit(message.text))}")
+                                          f"\nСсылка на вступления в группу:"
+                                          f" {functions_.generateLink(queries.md5_lower_32bit(message.text))}")
         send_main_keyboard(message.chat.id)
     else:
         bot.send_message(message.chat.id, f"Группа с именем {message.text} уже существует. Попробуйте ещё раз")
         handle_create_group_callback2(message)
 
 
-# Создаем ссылку
-def generateLink(name): return f"https://t.me/schledule_bot?start={name}"
-
-def get_list_of_groups_with_links_from_db_of_user(user_id):
-    list_of_groups = queries.get_groups_list_of_user_with_hash(user_id)
-    # Преобразование списка в строку формата "название группы - ссылка"
-    formatted_groups = '\n'.join([f'{group[0]} - {generateLink(group[1])}' for group in list_of_groups])
-    return formatted_groups
-@bot.callback_query_handler(func=lambda call: call.data == "Back_to_main_menu")
-def handle_GoBack_callback(call):
-    keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(keyboards.sendInfoButton, keyboards.manageGroupsButton, keyboards.intervalsEditingButton)
-
-    groups_of_user = get_list_of_groups_with_links_from_db_of_user(call.from_user.id)
-    if groups_of_user:
-        bot.edit_message_text(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            text=f'Это группы, в которых ты состоишь:\n{groups_of_user}'
-        )
-    else:
-        bot.send_message(call.message.chat.id, 'Ты пока не состоишь в какой-либо группе')
-    bot.send_message(call.message.chat.id, text='Выберите действие:',   reply_markup=keyboard)
-
-# Колбэк на отмену создания новой группы
-@bot.callback_query_handler(func=lambda call: call.data == "Cancel")
-def handle_cancel_callback(call):
-    # Отменяем текущее действие
-    # Нужно что-то сделать с тем, что оно остаётся
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Создание новой группы отменено")
-
-# Обработчик наажания на кнопку Выбрать, то есть выбор группы для дальнейших действий именно с этой группой
+# Обработчик наажания на кнопку Выбрать, то есть выбор группы для дальнейших действий именно с ней
 @bot.callback_query_handler(func=lambda call: call.data == "chooseGroup")
 def handle_choose_group_callback(call):
     groupList = queries.get_groups_list_of_user(call.from_user.id)
@@ -226,6 +201,17 @@ def handle_choose_group_callback(call):
 def handle_chosen_group_callback(call):
     chosen_group = call.data.split('_', 1)[1] # Достаем название выбранной группы
     bot.send_message(call.message.chat.id, text=f'Вы выбрали группу: {chosen_group}')
+
+# Обработка кнопок Назад
+@bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_creating_group", "Back_to_main_menu_from_manage_group"])
+def handle_goBack_from_creatingGroup(call):
+    match(call.data):
+        case "Back_to_main_menu_from_creating_group:":
+            bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
+            GoBack(call)
+        case "Back_to_main_menu_from_manage_group":
+            GoBack()
+
 # Обработчик колбэка на нажатия на кнопку редактирнования интервалов
 # Тут вообще пиздец
 @bot.callback_query_handler(func=lambda call: call.data == "Intervals")
