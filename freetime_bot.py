@@ -10,7 +10,7 @@ import functions_
 bot = telebot.TeleBot(data.token)
 
 # Функция для вывода основного выбора действий
-# ЕСТЬ ВОПРОСЫ! Убрать кнопку Новая группа, вставить ее в INFO
+# ЕСТЬ ВОПРОСЫ! (Возможно, третья кнопка с выводом общих интервалов добавится)
 def send_main_keyboard(chat_id):
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.manageGroupsButton)
@@ -31,17 +31,20 @@ def create_callback_handler(groupname):
             # Логика регистрации группы
             response = isTeamExistnadUserInIt(call, groupname)
             match (response):
-                case "Вступил":
-                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=f"Вы успешно вступили в группу {groupname}.")
-                case "Ошибка":
-                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="Ошибка при попытке вступить в группу.")
-                case "Состоит":
-                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text=f"Вы уже состоите в группе {groupname}.")
-                case "Отсутствует":
-                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Такая группа либо не существует, либо уже удалена.")
-        elif call.data == "No":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                  text=f"Вы отклонили предложение на вступление в группу — {groupname}.")
+                case "Вступил": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                                       text=f"Вы успешно вступили в группу {groupname}.")
+                    
+                case "Ошибка": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                                     text="Ошибка при попытке вступить в группу.")
+                    
+                case "Состоит": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                                      text=f"Вы уже состоите в группе {groupname}.")
+                                        
+                case "Отсутствует": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                                           text="Такая группа либо не существует, либо уже удалена.")
+                         
+        else: bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text=f"Вы отклонили предложение на вступление в группу — {groupname}.")            
         send_main_keyboard(call.message.chat.id)
     return handle_callback
 
@@ -125,32 +128,18 @@ def handle_manage_group_callback(call):
         keyboard = types.InlineKeyboardMarkup()
         keyboard.add(keyboardsButtons.createGroupButton,keyboardsButtons.chooseGroupButton,
                      keyboardsButtons.backButtonFromManageGroupTOMain)
-        # list_of_groups = queries.get_groups_list_of_user_with_hash(call.from_user.id)
+        
         # Преобразование списка в строку формата "название группы - ссылка"
-        # formatted_groups = '\n'.join([f'{group[0]} - {functions_.generateLink(group[1])}' for group in list_of_groups])
         formatted_groups = functions_.get_list_of_groups_with_links_from_db_of_user(call.from_user.id)
-        # chat_id = call.message.chat.id, message_id = call.message.message_id, text = "Создание новой группы отменено"
-        # Отправка сообщения с отформатированным списком групп
-        if formatted_groups:
-            bot.edit_message_text(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-                text=f'Это группы, в которых ты состоишь:\n{formatted_groups}',
-                reply_markup=keyboard
-            )
-        else:
-            keyboard = types.InlineKeyboardMarkup()
-            keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromManageGroupTOMain)
-            bot.edit_message_text(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,
-                text = 'Ты пока не состоишь в какой-либо группе',
-                reply_markup=keyboard)
-            # send_main_keyboard(call.message.chat.id)
+        
+        # Отправка сообщения с отформатированным списком групп, либо сообщение об отсутствие групп
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text=f'Это группы, в которых ты состоишь:\n{formatted_groups}' if formatted_groups else 'Ты пока не состоишь в какой-либо группе',
+            reply_markup= keyboard.add(keyboardsButtons.chooseGroupButton) if formatted_groups else keyboard
+        )
 
-        # нужно для того, чтобы бот больше не ожидал следующего шага в виде названия новой группы
-        # bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
-        # GoBack(call)
 # Обработчик колбэка на создание новой группы
 @bot.callback_query_handler(func=lambda call: call.data in ["CreateGroup"])
 def handle_create_group_callback(call):
