@@ -4,12 +4,12 @@ from connection_pool import pool
 import hashlib
 
 # Регистрация пользователя
-def register(telegramid, pool = pool):
+def register(telegramid, first_name, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"INSERT INTO user_info(telegramid) VALUES ({telegramid})")
+        cursor.execute(f"INSERT INTO user_info(telegramid, first_name) VALUES ({telegramid}, '{first_name}')")
         conn.commit()
         return True
     # Если появилась ошибка, то возвращаем ошибку
@@ -135,6 +135,22 @@ def get_groups_list_of_user(telegramid, pool=pool):
     try:
         cursor.execute(f"SELECT name FROM view_member WHERE telegramid = {telegramid}")
         list_of_users_groups = cursor.fetchall()
+        return list_of_users_groups
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
+
+
+def getGroupNameFromHash(hash):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    # Пробуем сделать запрос
+    try:
+        cursor.execute(f"SELECT name FROM team WHERE hash = '{hash}'")
+        list_of_users_groups = cursor.fetchone()[0]
         return list_of_users_groups
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:

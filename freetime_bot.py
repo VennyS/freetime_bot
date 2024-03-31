@@ -50,13 +50,13 @@ def create_callback_handler(groupname):
 
 # Метод проверки и регистрации пользователя
 def register(message):
-    user = queries.is_telegramid_exist(telegramid = message.from_user.id)
+    user = queries.is_telegramid_exist(telegramid=message.from_user.id)
     if isinstance(user, Exception):
         bot.send_message(message.chat.id,  ERROR_MESSAGE)
         return False
     else:
         if (not user):
-            queries.register(telegramid = message.from_user.id)
+            queries.register(telegramid=message.from_user.id, first_name=message.from_user.first_name)
             # Если только что зарегался
             return True
 
@@ -85,7 +85,6 @@ def isTeamExistnadUserInIt(call, name):
 def handle_start(message):
     # Разделяем команду и параметры
     args = message.text.split()
-
     firstTime = register(message)
 
     # Проверка наличия пользователя в БД
@@ -97,7 +96,8 @@ def handle_start(message):
 
     # Проверяем, есть ли параметр после /start. [Переход по ссылке]
     if len(args) > 1:
-        groupname = args[1] # Получаем параметр
+        # Получаем параметр
+        groupname = queries.getGroupNameFromHash(args[1])
 
         send_entery_group_keyboard(message.chat.id, groupname)
 
@@ -126,20 +126,29 @@ def send_help(message): # Функция вывода описания бота 
 @bot.callback_query_handler(func=lambda call: call.data in  ["ManageGroups"])
 def handle_manage_group_callback(call):
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(keyboardsButtons.createGroupButton,keyboardsButtons.chooseGroupButton,
+        keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.chooseGroupButton,
                      keyboardsButtons.backButtonFromManageGroupTOMain)
-        
+
         # Преобразование списка в строку формата "название группы - ссылка"
         formatted_groups = functions_.get_list_of_groups_with_links_from_db_of_user(call.from_user.id)
         
         # Отправка сообщения с отформатированным списком групп, либо сообщение об отсутствие групп
-        bot.edit_message_text(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-            text=f'Это группы, в которых ты состоишь:\n{formatted_groups}' if formatted_groups else 'Ты пока не состоишь в какой-либо группе',
-            reply_markup= keyboard.add(keyboardsButtons.chooseGroupButton) if formatted_groups else keyboard
-        )
-
+        if formatted_groups:
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+                text=f'Это группы, в которых ты состоишь:\n{formatted_groups}',
+                reply_markup= keyboard
+            )
+        else:
+            keyboard = types.InlineKeyboardMarkup()
+            keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromManageGroupTOMain)
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+                text= 'Ты пока не состоишь в какой-либо группе',
+                reply_markup=keyboard
+            )
 # Обработчик колбэка на создание новой группы
 @bot.callback_query_handler(func=lambda call: call.data in ["CreateGroup"])
 def handle_create_group_callback(call):
@@ -149,7 +158,7 @@ def handle_create_group_callback(call):
     mesg = bot.edit_message_text(
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
-                text = TEAM_NAME_MESSAGE,
+                text=TEAM_NAME_MESSAGE,
                 reply_markup=keyboard)
     bot.register_next_step_handler(mesg, validTeamName)
 
@@ -170,7 +179,7 @@ def validTeamName(message):
                          f"Группа с именем {message.text} уже существует. Попробуйте ещё раз", reply_markup=keyboard)
 
 
-# Обработчик наажания на кнопку Выбрать, то есть выбор группы для дальнейших действий именно с ней
+# Обработчик нажатия на кнопку Выбрать, то есть выбор группы для дальнейших действий именно с ней
 @bot.callback_query_handler(func=lambda call: call.data == "chooseGroup")
 def handle_choose_group_callback(call):
     groupList = queries.get_groups_list_of_user(call.from_user.id)
@@ -184,11 +193,10 @@ def handle_choose_group_callback(call):
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            text=f'Выбери нужную для упарвления группу:\n',
+            text=f'Выбери нужную для управления группу:\n',
             reply_markup=keyboard
         )
-    else:
-        bot.send_message(call.message.chat.id, text= 'ди нахуй вообще лох')
+
 # Обработчик для выбранной группы
 # Благодаря startswitch мы отслеживаем начинается ли строка с заданной
 @bot.callback_query_handler(func=lambda call: call.data.startswith("group_"))
