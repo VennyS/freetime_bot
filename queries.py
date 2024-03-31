@@ -4,16 +4,17 @@ from connection_pool import pool
 import hashlib
 
 # Регистрация пользователя
-def register(telegramid, pool = pool):
+def register(telegramid, first_name, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"INSERT INTO user_info(telegramid) VALUES ({telegramid})")
+        cursor.execute(f"INSERT INTO user_info(telegramid, first_name) VALUES ({telegramid}, '{first_name}')")
         conn.commit()
         return True
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
+        print(e)
         return e
     # Отдаем подключение обратно в пулл
     finally:
@@ -30,6 +31,7 @@ def is_telegramid_exist(telegramid, pool = pool):
         return isExist
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
+        print(e)
         return e
     # Отдаем подключение обратно в пулл
     finally:
@@ -45,6 +47,7 @@ def is_team_exists(name, pool = pool):
         return isExist
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
+        print(e)
         return e
     # Отдаем подключение обратно в пулл
     finally:
@@ -61,6 +64,7 @@ def is_user_joined(telegramid, name, pool = pool):
         return isExist
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
+        print(e)
         return e
     # Отдаем подключение обратно в пулл
     finally:
@@ -72,11 +76,12 @@ def registerInGroup(telegramid, name, pool = pool):
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"INSERT INTO view_member(telegramid, name) VALUES ('{telegramid}', '{name}')")
+        cursor.execute(f"INSERT INTO view_member(telegramid, name) VALUES ({telegramid}, '{name}')")
         conn.commit()
         return True
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
+        print(e)
         return e
     # Отдаем подключение обратно в пулл
     finally:
@@ -94,16 +99,17 @@ def md5_lower_32bit(name):
     return hash_value.hex()
 
 # Добавляет группу и её хэш в таблицу team
-def createGroup(name, pool = pool):
+def createGroup(name, first_name, telegramid, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"INSERT INTO team(name, hash) VALUES ('{name}', '{md5_lower_32bit(name)}')")
+        cursor.execute(f"INSERT INTO view_team(name, first_name, telegramid, hash) VALUES ('{name}', '{first_name}',{telegramid}, '{md5_lower_32bit(name)}')")
         conn.commit()
         return True
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
+        print(e)
         return e
     # Отдаем подключение обратно в пулл
     finally:
@@ -123,6 +129,7 @@ def get_groups_list_of_user_with_hash(telegramid, pool = pool):
         return list_of_users_groups_with_hash
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
+        print(e)
         return e
     # Отдаем подключение обратно в пулл
     finally:
@@ -138,6 +145,24 @@ def get_groups_list_of_user(telegramid, pool=pool):
         return list_of_users_groups
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
+        print(e)
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
+
+
+def getGroupNameFromHash(hash):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    # Пробуем сделать запрос
+    try:
+        cursor.execute(f"SELECT name FROM team WHERE hash = '{hash}'")
+        list_of_users_groups = cursor.fetchone()[0]
+        return list_of_users_groups
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        print(e)
         return e
     # Отдаем подключение обратно в пулл
     finally:

@@ -1,4 +1,15 @@
 -- Создаем правило для представления view_member
+CREATE OR REPLACE RULE insert_view_team_rule AS
+    ON INSERT TO view_team
+    DO INSTEAD (
+        -- Вставляем новую запись в таблицу member
+        INSERT INTO team (name, hash, adminid)
+        VALUES (
+            NEW.name,
+            NEW.hash, (SELECT id FROM user_info WHERE telegramid = NEW.telegramid)
+        );
+    );
+-- Создаем правило для представления view_member
 CREATE RULE insert_view_member_rule AS
     ON INSERT TO view_member
     DO INSTEAD (

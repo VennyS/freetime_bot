@@ -1,12 +1,12 @@
-INSERT INTO user_info(telegramid) VALUES 
-(11), 
-(22),
-(33);
+INSERT INTO user_info(telegramid, first_name) VALUES 
+(11, 'Андрей'), 
+(22, 'Леонтий'),
+(33, 'Данил');
 
-INSERT INTO team(name, hash) VALUES
-('Сатка', '1be82cb4898e5894'),
-('Магнитогорск', '03256626d2ee411c'),
-('Петровка', 'ae4867e49e961119');
+INSERT INTO team(name, hash, adminid) VALUES
+('Сатка', '1be82cb4898e5894', 1),
+('Магнитогорск', '03256626d2ee411c', 2),
+('Петровка', 'ae4867e49e961119', 3);
 
 INSERT INTO member(userid, teamid) VALUES
 (1, 1),
