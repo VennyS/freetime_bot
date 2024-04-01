@@ -43,17 +43,36 @@ def create_callback_handler(groupname):
                                         
                 case "Отсутствует": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                                            text="Такая группа либо не существует, либо уже удалена")
+            send_main_keyboard(call.message.chat.id)
                          
         elif call.data == "No":
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                   text=f"Вы отклонили предложение на вступление в группу — «{groupname}»")
+            send_main_keyboard(call.message.chat.id)
+
         elif call.data.startswith("user_"):
                 chosen_user = call.data.split('_', 1)[1]
                 if call.from_user.id == queries.get_Admin_First_Name(groupname)[1]:
-                    bot.send_message(call.message.chat.id, 'Ты админ')
+                    keyboard = types.InlineKeyboardMarkup()
+                    keyboard.add(keyboardsButtons.linkToUser, keyboardsButtons.deleteUser,
+                                 keyboardsButtons.backButtonFromChosenUserToListOfUsers)
+                    #
+                    bot.edit_message_text(
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+                        text=f'Пользователь {chosen_user}',
+                        reply_markup=keyboard
+                    )
                 else:
-                    bot.send_message(call.message.chat.id, 'Ты не админ')
-        send_main_keyboard(call.message.chat.id)
+                    keyboard = types.InlineKeyboardMarkup()
+                    keyboard.add(keyboardsButtons.linkToUser, keyboardsButtons.backButtonFromChosenUserToListOfUsers)
+                    bot.edit_message_text(
+                        chat_id=call.message.chat.id,
+                        message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+                        text=f'Пользователь {chosen_user}',
+                        reply_markup=keyboard
+                    )
+
     return handle_callback
 
 # Метод проверки и регистрации пользователя
@@ -101,7 +120,7 @@ def handle_start(message):
     if isinstance(user, Exception):
         bot.send_message(message.chat.id,  ERROR_MESSAGE)
     else:
-        if (not user): queries.register(telegramid=message.from_user.id)
+        if (not user): queries.register(telegramid=message.from_user.id, first_name=message.from_user.first_name)
 
     # Проверяем, есть ли параметр после /start. [Переход по ссылке]
     if len(args) > 1:
@@ -232,15 +251,12 @@ def handle_chosen_group_callback(call):
     )
     bot.callback_query_handler(func=lambda call: call.data.startswith("user_"))(create_callback_handler(chosen_group))
 
-# def handle_chosen_user_callback(call, chosen_group):
-#     chosen_user = call.data.split('_', 1)[1]
-#     if call.message.from_user.id == queries.get_Admin_First_Name(chosen_group)[1]:
-#         bot.send_message(call.message.chat.id, 'Ты админ')
-
 
 
 # Обработка кнопок Назад
-@bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_creating_group", "Back_to_main_menu_from_manage_group"])
+@bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_creating_group",
+                                                            "Back_to_main_menu_from_manage_group",
+                                                            "backButtonFromChosenUserToListOfUsers"])
 def handle_goBack_from_creatingGroup(call):
     bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
     GoBack(call)

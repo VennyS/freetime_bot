@@ -33,6 +33,21 @@ def GoBack(call):
                     message_id=call.message.message_id,
                     text='Выберите действие:',
                     reply_markup = keyboard)
+        # case 'backButtonFromChosenUserToListOfUsers':
+            # groupList = queries.get_groups_list_of_user(call.from_user.id)
+            # if groupList:
+            #     formatted_groupList = [item[0] for item in groupList]  # список из строк
+            #     keyboard = types.InlineKeyboardMarkup()
+            #     keyboard.row_width = 1
+            #     for group in formatted_groupList:
+            #         keyboard.add(types.InlineKeyboardButton(group, callback_data=f'group_{group}'))
+            #     keyboard.add(keyboardsButtons.backButtonFromCreatingGroupToMain)
+            #     bot.edit_message_text(
+            #         chat_id=call.message.chat.id,
+            #         message_id=call.message.message_id,
+            #         text=f'Выбери нужную для управления группу:\n',
+            #         reply_markup=keyboard
+            #     )
 
 
 
