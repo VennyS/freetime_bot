@@ -44,8 +44,15 @@ def create_callback_handler(groupname):
                 case "Отсутствует": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                                            text="Такая группа либо не существует, либо уже удалена")
                          
-        else: bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+        elif call.data == "No":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                   text=f"Вы отклонили предложение на вступление в группу — «{groupname}»")
+        elif call.data.startswith("user_"):
+                chosen_user = call.data.split('_', 1)[1]
+                if call.from_user.id == queries.get_Admin_First_Name(groupname)[1]:
+                    bot.send_message(call.message.chat.id, 'Ты админ')
+                else:
+                    bot.send_message(call.message.chat.id, 'Ты не админ')
         send_main_keyboard(call.message.chat.id)
     return handle_callback
 
@@ -223,12 +230,12 @@ def handle_chosen_group_callback(call):
         text=f'Пользователи группы «{chosen_group}»: \n',
         reply_markup=keyboard
     )
-    bot.callback_query_handler(func=lambda call: call.data.startswith("user_"))(handle_chosen_user_callback(chosen_group))
+    bot.callback_query_handler(func=lambda call: call.data.startswith("user_"))(create_callback_handler(chosen_group))
 
-def handle_chosen_user_callback(call, chosen_group):
-    chosen_user = call.data.split('_', 1)[1]
-    if call.message.from_user.id == queries.get_Admin_First_Name(chosen_group)[1]:
-        bot.send_message(call.message.chat.id, 'Ты админ')
+# def handle_chosen_user_callback(call, chosen_group):
+#     chosen_user = call.data.split('_', 1)[1]
+#     if call.message.from_user.id == queries.get_Admin_First_Name(chosen_group)[1]:
+#         bot.send_message(call.message.chat.id, 'Ты админ')
 
 
 
