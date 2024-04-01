@@ -30,21 +30,22 @@ def create_callback_handler(groupname):
         if call.data == "Yes":
             # Логика регистрации группы
             response = isTeamExistnadUserInIt(call, queries.md5_lower_32bit(groupname))
+            print(response)
             match (response):
                 case "Вступил": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                                       text=f"Вы успешно вступили в группу {groupname}.")
+                                                       text=f"Вы успешно вступили в группу «{groupname}»")
                     
                 case "Ошибка": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                                     text="Ошибка при попытке вступить в группу.")
+                                                     text="Ошибка при попытке вступить в группу")
                     
                 case "Состоит": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                                      text=f"Вы уже состоите в группе {groupname}.")
+                                                      text=f"Вы уже состоите в группе «{groupname}»")
                                         
                 case "Отсутствует": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                                           text="Такая группа либо не существует, либо уже удалена.")
+                                                           text="Такая группа либо не существует, либо уже удалена")
                          
         else: bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                  text=f"Вы отклонили предложение на вступление в группу — {groupname}.")            
+                                  text=f"Вы отклонили предложение на вступление в группу — «{groupname}»")
         send_main_keyboard(call.message.chat.id)
     return handle_callback
 
@@ -97,12 +98,17 @@ def handle_start(message):
     # Проверяем, есть ли параметр после /start. [Переход по ссылке]
     if len(args) > 1:
         # Получаем параметр
+        # Проверка если пользователь уже состоит в этой группе
         groupname = queries.getGroupNameFromHash(args[1])
 
-        send_entery_group_keyboard(message.chat.id, groupname)
+        if not queries.is_user_joined(message.from_user.id, groupname):
+            send_entery_group_keyboard(message.chat.id, groupname)
 
-        # Замыкание для передачи параметра группы в обработчик колбэк запросов
-        bot.callback_query_handler(func=lambda call: call.data in ["Yes", "No"])(create_callback_handler(groupname))
+            # Замыкание для передачи параметра группы в обработчик колбэк запросов
+            bot.callback_query_handler(func=lambda call: call.data in ["Yes", "No"])(create_callback_handler(groupname))
+        else:
+            bot.send_message(message.chat.id, f'Вы уже состоите в группе "{groupname}"')
+            send_main_keyboard(message.chat.id)
     # Если /start без ссылки
     else:
         bot.reply_to(message, HELLO_MESSAGE)

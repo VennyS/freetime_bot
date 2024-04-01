@@ -55,12 +55,12 @@ def is_team_exists(hash, pool = pool):
         pool.put_connection(conn)
 
 # Проверка состоит ли пользователь в группе
-def is_user_joined(telegramid, name, pool = pool):
+def is_user_joined(telegramid, groupname, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"SELECT EXISTS(SELECT 1 FROM view_member WHERE telegramid = {telegramid} AND name = '{name}')")
+        cursor.execute(f"SELECT EXISTS(SELECT 1 FROM view_member WHERE telegramid = {telegramid} AND name = '{groupname}')")
         isExist = cursor.fetchone()[0]
         return isExist
     # Если появилась ошибка, то возвращаем ошибку
