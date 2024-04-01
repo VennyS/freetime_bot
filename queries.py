@@ -44,6 +44,7 @@ def is_team_exists(hash, pool = pool):
     try:
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM team WHERE hash = '{hash}')")
         isExist = cursor.fetchone()[0]
+        print(isExist)
         return isExist
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:

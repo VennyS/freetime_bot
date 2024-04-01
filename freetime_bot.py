@@ -29,7 +29,7 @@ def create_callback_handler(groupname):
     def handle_callback(call): # Функция обработки колбэк запроса
         if call.data == "Yes":
             # Логика регистрации группы
-            response = isTeamExistnadUserInIt(call, groupname)
+            response = isTeamExistnadUserInIt(call, queries.md5_lower_32bit(groupname))
             match (response):
                 case "Вступил": bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                                        text=f"Вы успешно вступили в группу {groupname}.")
@@ -61,14 +61,14 @@ def register(message):
             return True
 
 # Метод проверки на существование группы и регистрации пользователя в ней
-def isTeamExistnadUserInIt(call, name):
-    group = queries.is_team_exists(name)
+def isTeamExistnadUserInIt(call, hash):
+    group = queries.is_team_exists(hash)
     # Если группа существует
     if (group):
         # Если пользовать не состоит в этой группе
-        if (not queries.is_user_joined(call.from_user.id, name)):
+        if (not queries.is_user_joined(call.from_user.id, hash)):
             # Если регистрация прошла успешно
-            if (queries.registerInGroup(call.from_user.id, name)):
+            if (queries.registerInGroup(call.from_user.id, hash)):
                 return "Вступил"
             else:
                 return "Ошибка"
@@ -97,15 +97,12 @@ def handle_start(message):
     # Проверяем, есть ли параметр после /start. [Переход по ссылке]
     if len(args) > 1:
         # Получаем параметр
-        if (queries.is_team_exists(args[1])):
-            groupname = queries.getGroupNameFromHash(args[1])
-            send_entery_group_keyboard(message.chat.id, groupname)
-            # Замыкание для передачи параметра группы в обработчик колбэк запросов
-            bot.callback_query_handler(func=lambda call: call.data in ["Yes", "No"])(create_callback_handler(groupname))
-        else:
-            bot.send_message(message.chat.id,  'Ссылка на вступление в группу недействительна')
-        
-        
+        groupname = queries.getGroupNameFromHash(args[1])
+
+        send_entery_group_keyboard(message.chat.id, groupname)
+
+        # Замыкание для передачи параметра группы в обработчик колбэк запросов
+        bot.callback_query_handler(func=lambda call: call.data in ["Yes", "No"])(create_callback_handler(groupname))
     # Если /start без ссылки
     else:
         bot.reply_to(message, HELLO_MESSAGE)
@@ -179,7 +176,7 @@ def validTeamName(message):
         keyboard = types.InlineKeyboardMarkup()
         keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromCreatingGroupToMain)
         bot.send_message(message.chat.id,
-                         f"Группа с именем {message.text} уже существует. Попробуйте ещё раз", reply_markup=keyboard)
+                         f"Группа с именем «{message.text}» уже существует. Попробуйте ещё раз", reply_markup=keyboard)
 
 
 # Обработчик нажатия на кнопку Выбрать, то есть выбор группы для дальнейших действий именно с ней
