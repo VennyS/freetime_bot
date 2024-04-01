@@ -64,12 +64,13 @@ def register(message):
 # Метод проверки на существование группы и регистрации пользователя в ней
 def isTeamExistnadUserInIt(call, hash):
     group = queries.is_team_exists(hash)
+    group_name = queries.getGroupNameFromHash(hash)
     # Если группа существует
     if (group):
         # Если пользовать не состоит в этой группе
         if (not queries.is_user_joined(call.from_user.id, hash)):
             # Если регистрация прошла успешно
-            if (queries.registerInGroup(call.from_user.id, hash)):
+            if (queries.registerInGroup(call.from_user.id, group_name)):
                 return "Вступил"
             else:
                 return "Ошибка"
@@ -208,7 +209,28 @@ def handle_choose_group_callback(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("group_"))
 def handle_chosen_group_callback(call):
     chosen_group = call.data.split('_', 1)[1] # Достаем название выбранной группы
-    bot.send_message(call.message.chat.id, text=f'Вы выбрали группу: {chosen_group}')
+    userList = queries.get_user_list_of_group(chosen_group)
+    adminId = queries.get_Admin_First_Name(chosen_group)
+    formatted_userList = [item[0] for item in userList if item != adminId]
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(f"{adminId[0]} - админ", callback_data=f"user_{adminId[0]}"))
+    for user in formatted_userList:
+        keyboard.add(types.InlineKeyboardButton(user, callback_data=f"user_{user}"))
+    keyboard.add(keyboardsButtons.backButtonFromCreatingGroupToMain)
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=f'Пользователи группы «{chosen_group}»: \n',
+        reply_markup=keyboard
+    )
+    bot.callback_query_handler(func=lambda call: call.data.startswith("user_"))(handle_chosen_user_callback(chosen_group))
+
+def handle_chosen_user_callback(call, chosen_group):
+    chosen_user = call.data.split('_', 1)[1]
+    if call.message.from_user.id == queries.get_Admin_First_Name(chosen_group)[1]:
+        bot.send_message(call.message.chat.id, 'Ты админ')
+
+
 
 # Обработка кнопок Назад
 @bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_creating_group", "Back_to_main_menu_from_manage_group"])

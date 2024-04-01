@@ -72,12 +72,12 @@ def is_user_joined(telegramid, groupname, pool = pool):
         pool.put_connection(conn)
 
 # Регистрация пользователя в группу
-def registerInGroup(telegramid, name, pool = pool):
+def registerInGroup(telegramid, group_name, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"INSERT INTO view_member(telegramid, name) VALUES ({telegramid}, '{name}')")
+        cursor.execute(f"INSERT INTO view_member(telegramid, name) VALUES ({telegramid}, '{group_name}')")
         conn.commit()
         return True
     # Если появилась ошибка, то возвращаем ошибку
@@ -144,6 +144,38 @@ def get_groups_list_of_user(telegramid, pool=pool):
         cursor.execute(f"SELECT name FROM view_member WHERE telegramid = {telegramid}")
         list_of_users_groups = cursor.fetchall()
         return list_of_users_groups
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        print(e)
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
+
+def get_user_list_of_group(name, pool=pool):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    # Пробуем сделать запрос
+    try:
+        cursor.execute(f"SELECT first_name, telegramid FROM view_member WHERE name = '{name}'")
+        user_list_of_group = cursor.fetchall()
+        return user_list_of_group
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        print(e)
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
+
+def get_Admin_First_Name(group_name, pool=pool):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    # Пробуем сделать запрос
+    try:
+        cursor.execute(f"SELECT first_name, telegramid FROM view_team WHERE name = '{group_name}'")
+        adminId = cursor.fetchone()
+        return adminId
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
         print(e)
