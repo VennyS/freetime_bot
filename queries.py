@@ -37,12 +37,12 @@ def is_telegramid_exist(telegramid, pool = pool):
     finally:
         pool.put_connection(conn)
 
-def is_team_exists(name, pool = pool):
+def is_team_exists(hash, pool = pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"SELECT EXISTS(SELECT 1 FROM team WHERE name = '{name}')")
+        cursor.execute(f"SELECT EXISTS(SELECT 1 FROM team WHERE hash = '{hash}')")
         isExist = cursor.fetchone()[0]
         return isExist
     # Если появилась ошибка, то возвращаем ошибку

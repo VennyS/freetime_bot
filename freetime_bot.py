@@ -97,12 +97,15 @@ def handle_start(message):
     # Проверяем, есть ли параметр после /start. [Переход по ссылке]
     if len(args) > 1:
         # Получаем параметр
-        groupname = queries.getGroupNameFromHash(args[1])
-
-        send_entery_group_keyboard(message.chat.id, groupname)
-
-        # Замыкание для передачи параметра группы в обработчик колбэк запросов
-        bot.callback_query_handler(func=lambda call: call.data in ["Yes", "No"])(create_callback_handler(groupname))
+        if (queries.is_team_exists(args[1])):
+            groupname = queries.getGroupNameFromHash(args[1])
+            send_entery_group_keyboard(message.chat.id, groupname)
+            # Замыкание для передачи параметра группы в обработчик колбэк запросов
+            bot.callback_query_handler(func=lambda call: call.data in ["Yes", "No"])(create_callback_handler(groupname))
+        else:
+            bot.send_message(message.chat.id,  'Ссылка на вступление в группу недействительна')
+        
+        
     # Если /start без ссылки
     else:
         bot.reply_to(message, HELLO_MESSAGE)
@@ -164,7 +167,7 @@ def handle_create_group_callback(call):
 
 # Проверка существование группы
 def validTeamName(message):
-    if not queries.is_team_exists(message.text):
+    if not queries.is_team_exists(queries.md5_lower_32bit(message.text)):
         queries.createGroup(message.text, message.from_user.first_name, message.from_user.id)
         # добавляем пользователя в группу после её создания
         queries.registerInGroup(message.from_user.id, message.text)
