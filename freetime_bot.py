@@ -54,8 +54,10 @@ def create_callback_handler(groupname):
                 chosen_user = call.data.split('_', 1)[1]
                 if call.from_user.id == queries.get_Admin_First_Name(groupname)[1]:
                     keyboard = types.InlineKeyboardMarkup()
+                    backButtonFromChosenUserToListOfUsers = types.InlineKeyboardButton(text="Назад",
+                                                                                       callback_data=f"backGroup_{groupname}")
                     keyboard.add(keyboardsButtons.linkToUser, keyboardsButtons.deleteUser,
-                                 keyboardsButtons.backButtonFromChosenUserToListOfUsers)
+                                 backButtonFromChosenUserToListOfUsers)
                     #
                     bot.edit_message_text(
                         chat_id=call.message.chat.id,
@@ -242,7 +244,7 @@ def handle_chosen_group_callback(call):
     keyboard.add(types.InlineKeyboardButton(f"{adminId[0]} - админ", callback_data=f"user_{adminId[0]}"))
     for user in formatted_userList:
         keyboard.add(types.InlineKeyboardButton(user, callback_data=f"user_{user}"))
-    keyboard.add(keyboardsButtons.backButtonFromCreatingGroupToMain)
+    keyboard.add(keyboardsButtons.backButtonFromChosenGroupToChoose)
     bot.edit_message_text(
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
@@ -251,12 +253,15 @@ def handle_chosen_group_callback(call):
     )
     bot.callback_query_handler(func=lambda call: call.data.startswith("user_"))(create_callback_handler(chosen_group))
 
+@bot.callback_query_handler(func=lambda call: call.data == "linkToUser")
+def handle_linktouser_callback(call):
+    bot.send_message(call.message.chat.id, call.message)
 
 
 # Обработка кнопок Назад
 @bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_creating_group",
                                                             "Back_to_main_menu_from_manage_group",
-                                                            "backButtonFromChosenUserToListOfUsers"])
+                                                            "backButtonFromChosenGroupToChoose",] or call.data.startswith("backGroup_"))
 def handle_goBack_from_creatingGroup(call):
     bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
     GoBack(call)
