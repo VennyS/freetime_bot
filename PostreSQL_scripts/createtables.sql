@@ -2,7 +2,7 @@ CREATE TABLE user_info (
 	id SERIAL PRIMARY KEY,
 	telegramid BIGINT NOT NULL,
 	first_name varchar(32) NOT NULL,
-	nickname varchar(63)NOT NULL
+	nickname varchar(64) NOT NULL
 );
 
 CREATE TABLE team(

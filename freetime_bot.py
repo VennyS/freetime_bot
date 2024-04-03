@@ -130,7 +130,8 @@ def handle_start(message):
     if isinstance(user, Exception):
         bot.send_message(message.chat.id,  ERROR_MESSAGE)
     else:
-        if (not user): queries.register(telegramid=message.from_user.id, first_name=message.from_user.first_name)
+        if (not user): queries.register(telegramid=message.from_user.id, first_name=message.from_user.first_name,
+                                        nickname=message.from_user.username)
 
     # Проверяем, есть ли параметр после /start. [Переход по ссылке]
     if len(args) > 1:

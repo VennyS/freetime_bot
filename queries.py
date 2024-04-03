@@ -9,7 +9,8 @@ def register(telegramid, first_name, nickname, pool = pool):
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"INSERT INTO user_info(telegramid, first_name, nickname) VALUES ({telegramid}, '{first_name}', '{nickname}')")
+        cursor.execute(f"INSERT INTO user_info(telegramid, first_name, nickname) VALUES ({telegramid}, '{first_name}',"
+                                                                                        f" '{nickname}')")
         conn.commit()
         return True
     # Если появилась ошибка, то возвращаем ошибку
@@ -60,7 +61,8 @@ def is_user_joined(telegramid, groupname, pool = pool):
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"SELECT EXISTS(SELECT 1 FROM view_member WHERE telegramid = {telegramid} AND name = '{groupname}')")
+        cursor.execute(f"SELECT EXISTS(SELECT 1 FROM view_member WHERE telegramid = {telegramid} "
+                       f"AND name = '{groupname}')")
         isExist = cursor.fetchone()[0]
         return isExist
     # Если появилась ошибка, то возвращаем ошибку
@@ -105,7 +107,8 @@ def createGroup(name, first_name, telegramid, pool = pool):
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"INSERT INTO view_team(name, first_name, telegramid, hash) VALUES ('{name}', '{first_name}',{telegramid}, '{md5_lower_32bit(name)}')")
+        cursor.execute(f"INSERT INTO view_team(name, first_name, telegramid, hash) VALUES ('{name}', '{first_name}', "
+                       f"{telegramid}, '{md5_lower_32bit(name)}')")
         conn.commit()
         return True
     # Если появилась ошибка, то возвращаем ошибку
