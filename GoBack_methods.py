@@ -1,8 +1,7 @@
 from freetime_bot import bot
 from telebot import types
 import keyboardsButtons
-import functions_
-import queries
+
 
 def GoBack(call):
     match(call.data):

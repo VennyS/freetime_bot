@@ -3,14 +3,15 @@ from connection_pool import pool
 
 import hashlib
 
+
 # Регистрация пользователя
-def register(telegramid, first_name, nickname, pool = pool):
+def register(telegramid, first_name, nickname, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
         cursor.execute(f"INSERT INTO user_info(telegramid, first_name, nickname) VALUES ({telegramid}, '{first_name}',"
-                                                                                        f" '{nickname}')")
+                       f" '{nickname}')")
         conn.commit()
         return True
     # Если появилась ошибка, то возвращаем ошибку
@@ -21,8 +22,9 @@ def register(telegramid, first_name, nickname, pool = pool):
     finally:
         pool.put_connection(conn)
 
+
 # Функция для проверки наличия telegramid в БД
-def is_telegramid_exist(telegramid, pool = pool):
+def is_telegramid_exist(telegramid, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
@@ -38,12 +40,13 @@ def is_telegramid_exist(telegramid, pool = pool):
     finally:
         pool.put_connection(conn)
 
-def is_team_exists(hash, pool = pool):
+
+def is_team_exists(groupname_hash, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"SELECT EXISTS(SELECT 1 FROM team WHERE hash = '{hash}')")
+        cursor.execute(f"SELECT EXISTS(SELECT 1 FROM team WHERE hash = '{groupname_hash}')")
         isExist = cursor.fetchone()[0]
         print(isExist)
         return isExist
@@ -55,8 +58,9 @@ def is_team_exists(hash, pool = pool):
     finally:
         pool.put_connection(conn)
 
+
 # Проверка состоит ли пользователь в группе
-def is_user_joined(telegramid, groupname, pool = pool):
+def is_user_joined(telegramid, groupname, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
@@ -73,8 +77,9 @@ def is_user_joined(telegramid, groupname, pool = pool):
     finally:
         pool.put_connection(conn)
 
+
 # Регистрация пользователя в группу
-def registerInGroup(telegramid, group_name, pool = pool):
+def registerInGroup(telegramid, group_name, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
@@ -90,6 +95,7 @@ def registerInGroup(telegramid, group_name, pool = pool):
     finally:
         pool.put_connection(conn)
 
+
 # Зашифровывает название группы
 def md5_lower_32bit(name):
     # Вычисляем хеш MD5
@@ -101,8 +107,9 @@ def md5_lower_32bit(name):
     # Переводим в строку и возвращаем в нижнем регистре
     return hash_value.hex()
 
+
 # Добавляет группу и её хэш в таблицу team
-def createGroup(name, first_name, telegramid, pool = pool):
+def createGroup(name, first_name, telegramid, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
@@ -119,8 +126,9 @@ def createGroup(name, first_name, telegramid, pool = pool):
     finally:
         pool.put_connection(conn)
 
+
 # Получаем все группы в которых состоит пользователь
-def get_groups_list_of_user_with_hash(telegramid, pool = pool):
+def get_groups_list_of_user_with_hash(telegramid, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
@@ -139,6 +147,7 @@ def get_groups_list_of_user_with_hash(telegramid, pool = pool):
     finally:
         pool.put_connection(conn)
 
+
 def get_groups_list_of_user(telegramid, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
@@ -155,6 +164,7 @@ def get_groups_list_of_user(telegramid, pool=pool):
     finally:
         pool.put_connection(conn)
 
+
 def get_user_list_of_group(name, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
@@ -170,6 +180,7 @@ def get_user_list_of_group(name, pool=pool):
     # Отдаем подключение обратно в пулл
     finally:
         pool.put_connection(conn)
+
 
 def get_Admin_First_Name(group_name, pool=pool):
     conn = pool.get_connection()
@@ -203,6 +214,7 @@ def getGroupNameFromHash(hash):
     # Отдаем подключение обратно в пулл
     finally:
         pool.put_connection(conn)
+
 
 def getUsernameAndFirstnameFromUser(telegramid):
     conn = pool.get_connection()
