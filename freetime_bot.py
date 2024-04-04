@@ -69,7 +69,6 @@ def deleteUser(call):
     adminId = call.from_user.id
     if queries.existsAdminIdWithId(int(adminId), groupname):
         queries.deleteUserFromAdmin(int(userId), groupname)
-        bot.send_message(call.message.chat.id, 'Ага')
 
 # Метод проверки и регистрации пользователя
 def register(message):
@@ -238,67 +237,45 @@ def handle_choose_group_callback(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("user_"))
 def handle_member_actions(call):
     chosen_userid, groupname = call.data.split('_')[1:3]
-
     chosen_user_username_firstname = queries.getUsernameAndFirstnameFromUser(chosen_userid)
-    # Проверка на админа
-    if call.from_user.id == queries.get_Admin_First_Name(groupname)[1]:
-        # Проверка на самого себя
-        if call.from_user.id == int(chosen_userid):
-            keyboard = types.InlineKeyboardMarkup()
-            back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
-                                                                                        callback_data=f"backGroup_{groupname}")
-            keyboard.add(back_button_from_chosen_user_to_list_of_users)
-            bot.edit_message_text(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-                text=f'Это ты ЕБЛАН',
-                reply_markup=keyboard
-            )
-        else:
-            keyboard = types.InlineKeyboardMarkup()
-            back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
-                                                                                        callback_data=f"backGroup_{groupname}")
-            button_deleteUser = types.InlineKeyboardButton(text="Удалить Пользователя",
-                                                            callback_data=f"deleteUser_{chosen_userid}_{groupname}")
-            button_url = f'https://t.me/{chosen_user_username_firstname[0][1]}'
-            link_to_user = types.InlineKeyboardButton(text="Ссылка", url=button_url)
-            keyboard.add(link_to_user, button_deleteUser,
-                            back_button_from_chosen_user_to_list_of_users)
-            bot.edit_message_text(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-                text=f'Пользователь {chosen_user_username_firstname[0][0]}',
-                reply_markup=keyboard
-            )
+
+    keyboard = types.InlineKeyboardMarkup()
+    back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
+                                                                                    callback_data=f"backGroup_{groupname}")
+    button_url = f'https://t.me/{chosen_user_username_firstname[0][1]}'
+    link_to_user = types.InlineKeyboardButton(text="Ссылка", url=button_url)
+
+    button_deleteUser = types.InlineKeyboardButton(text="Удалить Пользователя",
+                                                        callback_data=f"deleteUser_{chosen_userid}_{groupname}")
+    # Если тыкнул на себя
+    if (call.from_user.id == int(chosen_userid)):
+        keyboard.add(back_button_from_chosen_user_to_list_of_users)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text=f'Это ты ЕБЛАН',
+            reply_markup=keyboard
+        )
+    # Если в чужой группе и не админ
+    elif not(call.from_user.id == queries.get_Admin_First_Name(groupname)[1]) and not(call.from_user.id == int(chosen_userid)):
+        keyboard.add(link_to_user,
+                        back_button_from_chosen_user_to_list_of_users)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text=f'Пользователь {chosen_user_username_firstname[0][0]}',
+            reply_markup=keyboard
+        )
+    # Если админ и тыкнул на другого
     else:
-        if call.from_user.id == int(chosen_userid):
-            keyboard = types.InlineKeyboardMarkup()
-            back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
-                                                                                        callback_data=f"backGroup_{groupname}")
-            keyboard.add(back_button_from_chosen_user_to_list_of_users)
-            bot.edit_message_text(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-                text=f'Это ты ЕБЛАН',
-                reply_markup=keyboard
-            )
-        else:
-            # Если в чужой группе и не админ
-            keyboard = types.InlineKeyboardMarkup()
-            back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
-                                                                                        callback_data=f"backGroup_{groupname}")
-            button_url = f'https://t.me/{chosen_user_username_firstname[0][1]}'
-            link_to_user = types.InlineKeyboardButton(text="Ссылка", url=button_url)
-            keyboard.add(link_to_user,
-                            back_button_from_chosen_user_to_list_of_users)
-            bot.edit_message_text(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-                text=f'Пользователь {chosen_user_username_firstname[0][0]}',
-                reply_markup=keyboard
-            )
-
-
+        keyboard.add(link_to_user, button_deleteUser,
+                        back_button_from_chosen_user_to_list_of_users)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text=f'Пользователь {chosen_user_username_firstname[0][0]}',
+            reply_markup=keyboard
+        )
 
 # Обработчик для выбранной группы
 # Благодаря startswitch мы отслеживаем начинается ли строка с заданной
