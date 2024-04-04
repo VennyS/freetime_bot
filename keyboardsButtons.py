@@ -12,9 +12,5 @@ backButtonFromCreatingGroupToMain = types.InlineKeyboardButton(text="Назад"
 chooseGroupButton = types.InlineKeyboardButton(text="Выбрать", callback_data="chooseGroup")
 backButtonFromManageGroupTOMain = types.InlineKeyboardButton(text='Назад', callback_data="Back_to_main_menu_from_manage_group")
 
-deleteGroup = types.InlineKeyboardButton(text="Удалить нахуй", callback_data="deleteGroup")
-
-
-
 backButtonFromChosenGroupToChoose = types.InlineKeyboardButton(text="Назад", callback_data="backButtonFromChosenGroupToChoose")
 

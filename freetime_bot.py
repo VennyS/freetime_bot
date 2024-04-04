@@ -283,15 +283,13 @@ def handle_member_actions(call):
                 reply_markup=keyboard
             )
         else:
-            # Здесь! УСЛОВИЕ
+            # Если в чужой группе и не админ
             keyboard = types.InlineKeyboardMarkup()
             back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
                                                                                         callback_data=f"backGroup_{groupname}")
-            button_deleteUser = types.InlineKeyboardButton(text="Удалить Пользователя",
-                                                            callback_data=f"deleteUser_{chosen_userid}_{groupname}")
             button_url = f'https://t.me/{chosen_user_username_firstname[0][1]}'
             link_to_user = types.InlineKeyboardButton(text="Ссылка", url=button_url)
-            keyboard.add(link_to_user, button_deleteUser,
+            keyboard.add(link_to_user,
                             back_button_from_chosen_user_to_list_of_users)
             bot.edit_message_text(
                 chat_id=call.message.chat.id,
@@ -299,6 +297,8 @@ def handle_member_actions(call):
                 text=f'Пользователь {chosen_user_username_firstname[0][0]}',
                 reply_markup=keyboard
             )
+
+
 
 # Обработчик для выбранной группы
 # Благодаря startswitch мы отслеживаем начинается ли строка с заданной
