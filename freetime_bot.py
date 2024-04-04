@@ -20,17 +20,16 @@ def send_main_keyboard(chat_id):
 # Клавиатура для вступления в группу
 def send_entery_group_keyboard(chat_id, groupname):
     keyboard = types.InlineKeyboardMarkup()
-    yes_button = types.InlineKeyboardButton(text="Да, хочу", callback_data="Yes")
-    no_button = types.InlineKeyboardButton(text="Нет", callback_data="No")
+    yes_button = types.InlineKeyboardButton(text="Да, хочу", callback_data=f"joinGroup_Yes_{groupname}")
+    no_button = types.InlineKeyboardButton(text="Нет", callback_data=f"joinGroup_No_{groupname}")
     keyboard.add(yes_button, no_button)
     bot.send_message(chat_id, f"Ты хочешь вступить в группу {groupname}?", reply_markup=keyboard)
 
-
-# Обработчик колбэк запроса с параметром группы
-def create_callback_handler(groupname):
-    # Функция обработки колбэк запроса
-    def handle_callback(call):
-        if call.data == "Yes":
+@bot.callback_query_handler(func=lambda call: call.data.startswith('joinGroup_'))
+def handle_join_answer(call):
+    answer = call.data.split('_')[1]
+    groupname = call.data.split('_')[2]
+    if answer == "Yes":
             # Логика регистрации группы
             response = is_team_exist_and_user_in_it(call, queries.md5_lower_32bit(groupname))
             match response:
@@ -50,79 +49,18 @@ def create_callback_handler(groupname):
                     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                           text="Такая группа либо не существует, либо уже удалена")
             send_main_keyboard(call.message.chat.id)
+    else:
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                text=f"Вы отклонили предложение на вступление в группу — «{groupname}»")
+        send_main_keyboard(call.message.chat.id)
 
-        elif call.data == "No":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                  text=f"Вы отклонили предложение на вступление в группу — «{groupname}»")
-            send_main_keyboard(call.message.chat.id)
+# # Обработчик колбэк запроса с параметром группы
+# def create_callback_handler(groupname):
+#     # Функция обработки колбэк запроса
+#     print(groupname)
+#     def handle_callback(call):
 
-        elif call.data.startswith("user_"):
-            chosen_userid = call.data.split('_', 1)[1]
-            chosen_user_username_firstname = queries.getUsernameAndFirstnameFromUser(chosen_userid)
-            # Проверка на админа
-            if call.from_user.id == queries.get_Admin_First_Name(groupname)[1]:
-                # Проверка на самого себя
-                if call.from_user.id == int(chosen_userid):
-                    print(groupname)
-                    keyboard = types.InlineKeyboardMarkup()
-                    back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
-                                                                                               callback_data=f"backGroup_{groupname}")
-                    keyboard.add(back_button_from_chosen_user_to_list_of_users)
-                    bot.edit_message_text(
-                        chat_id=call.message.chat.id,
-                        message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-                        text=f'Это ты ЕБЛАН',
-                        reply_markup=keyboard
-                    )
-                else:
-                    print(groupname)
-                    keyboard = types.InlineKeyboardMarkup()
-                    back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
-                                                                                               callback_data=f"backGroup_{groupname}")
-                    button_deleteUser = types.InlineKeyboardButton(text="Удалить Пользователя",
-                                                                   callback_data=f"deleteUser_{chosen_userid}_{groupname}")
-                    button_url = f'https://t.me/{chosen_user_username_firstname[0][1]}'
-                    link_to_user = types.InlineKeyboardButton(text="Ссылка", url=button_url)
-                    keyboard.add(link_to_user, button_deleteUser,
-                                 back_button_from_chosen_user_to_list_of_users)
-                    bot.edit_message_text(
-                        chat_id=call.message.chat.id,
-                        message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-                        text=f'Пользователь {chosen_user_username_firstname[0][0]}',
-                        reply_markup=keyboard
-                    )
-            else:
-                if call.from_user.id == int(chosen_userid):
-                    print(groupname)
-                    keyboard = types.InlineKeyboardMarkup()
-                    back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
-                                                                                               callback_data=f"backGroup_{groupname}")
-                    keyboard.add(back_button_from_chosen_user_to_list_of_users)
-                    bot.edit_message_text(
-                        chat_id=call.message.chat.id,
-                        message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-                        text=f'Это ты ЕБЛАН',
-                        reply_markup=keyboard
-                    )
-                else:
-                    print(groupname)
-                    keyboard = types.InlineKeyboardMarkup()
-                    back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
-                                                                                               callback_data=f"backGroup_{groupname}")
-                    button_deleteUser = types.InlineKeyboardButton(text="Удалить Пользователя",
-                                                                   callback_data=f"deleteUser_{chosen_userid}_{groupname}")
-                    button_url = f'https://t.me/{chosen_user_username_firstname[0][1]}'
-                    link_to_user = types.InlineKeyboardButton(text="Ссылка", url=button_url)
-                    keyboard.add(link_to_user, button_deleteUser,
-                                 back_button_from_chosen_user_to_list_of_users)
-                    bot.edit_message_text(
-                        chat_id=call.message.chat.id,
-                        message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-                        text=f'Пользователь {chosen_user_username_firstname[0][0]}',
-                        reply_markup=keyboard
-                    )
-
-    return handle_callback
+        
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('deleteUser_'))
 def deleteUser(call):
@@ -194,8 +132,6 @@ def handle_start(message):
         if not queries.is_user_joined(message.from_user.id, groupname):
             send_entery_group_keyboard(message.chat.id, groupname)
 
-            # Замыкание для передачи параметра группы в обработчик колбэк запросов
-            bot.callback_query_handler(func=lambda call: call.data in ["Yes", "No"])(create_callback_handler(groupname))
         else:
             bot.send_message(message.chat.id, f'Вы уже состоите в группе "{groupname}"')
             send_main_keyboard(message.chat.id)
@@ -298,21 +234,89 @@ def handle_choose_group_callback(call):
             reply_markup=keyboard
         )
 
+# Если ты не админ и нажимаешь на админа
+@bot.callback_query_handler(func=lambda call: call.data.startswith("user_"))
+def handle_member_actions(call):
+    chosen_userid, groupname = call.data.split('_')[1:3]
+
+    chosen_user_username_firstname = queries.getUsernameAndFirstnameFromUser(chosen_userid)
+    # Проверка на админа
+    if call.from_user.id == queries.get_Admin_First_Name(groupname)[1]:
+        # Проверка на самого себя
+        if call.from_user.id == int(chosen_userid):
+            keyboard = types.InlineKeyboardMarkup()
+            back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
+                                                                                        callback_data=f"backGroup_{groupname}")
+            keyboard.add(back_button_from_chosen_user_to_list_of_users)
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+                text=f'Это ты ЕБЛАН',
+                reply_markup=keyboard
+            )
+        else:
+            keyboard = types.InlineKeyboardMarkup()
+            back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
+                                                                                        callback_data=f"backGroup_{groupname}")
+            button_deleteUser = types.InlineKeyboardButton(text="Удалить Пользователя",
+                                                            callback_data=f"deleteUser_{chosen_userid}_{groupname}")
+            button_url = f'https://t.me/{chosen_user_username_firstname[0][1]}'
+            link_to_user = types.InlineKeyboardButton(text="Ссылка", url=button_url)
+            keyboard.add(link_to_user, button_deleteUser,
+                            back_button_from_chosen_user_to_list_of_users)
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+                text=f'Пользователь {chosen_user_username_firstname[0][0]}',
+                reply_markup=keyboard
+            )
+    else:
+        if call.from_user.id == int(chosen_userid):
+            keyboard = types.InlineKeyboardMarkup()
+            back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
+                                                                                        callback_data=f"backGroup_{groupname}")
+            keyboard.add(back_button_from_chosen_user_to_list_of_users)
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+                text=f'Это ты ЕБЛАН',
+                reply_markup=keyboard
+            )
+        else:
+            # Здесь! УСЛОВИЕ
+            keyboard = types.InlineKeyboardMarkup()
+            back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
+                                                                                        callback_data=f"backGroup_{groupname}")
+            button_deleteUser = types.InlineKeyboardButton(text="Удалить Пользователя",
+                                                            callback_data=f"deleteUser_{chosen_userid}_{groupname}")
+            button_url = f'https://t.me/{chosen_user_username_firstname[0][1]}'
+            link_to_user = types.InlineKeyboardButton(text="Ссылка", url=button_url)
+            keyboard.add(link_to_user, button_deleteUser,
+                            back_button_from_chosen_user_to_list_of_users)
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+                text=f'Пользователь {chosen_user_username_firstname[0][0]}',
+                reply_markup=keyboard
+            )
 
 # Обработчик для выбранной группы
 # Благодаря startswitch мы отслеживаем начинается ли строка с заданной
 @bot.callback_query_handler(func=lambda call: call.data.startswith("group_") or call.data.startswith("backGroup_"))
 def handle_chosen_group_callback(call):
     # Достаем название выбранной группы
-    chosen_group = call.data.split('_', 1)[1]
+    chosen_group = call.data.split('_')[1]
     user_list = queries.get_user_list_of_group(chosen_group)
     admin_id = queries.get_Admin_First_Name(chosen_group)
+
     # Список пользователей группы без админа
     formatted_user_list = [item for item in user_list if item != admin_id]
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(f"{admin_id[0]} - админ", callback_data=f"user_{admin_id[1]}"))
+    keyboard.add(types.InlineKeyboardButton(f"{admin_id[0]} - админ", callback_data=f"user_{admin_id[1]}_{chosen_group}"))
+
     for user in formatted_user_list:
-        keyboard.add(types.InlineKeyboardButton(user[0], callback_data=f"user_{user[1]}"))
+        keyboard.add(types.InlineKeyboardButton(user[0], callback_data=f"user_{user[1]}_{chosen_group}"))
+
     keyboard.add(keyboardsButtons.backButtonFromChosenGroupToChoose)
     bot.edit_message_text(
         chat_id=call.message.chat.id,
@@ -320,11 +324,6 @@ def handle_chosen_group_callback(call):
         text=f'Пользователи группы «{chosen_group}»: \n',
         reply_markup=keyboard
     )
-    print(chosen_group)
-    bot.callback_query_handler(func=lambda call: call.data.startswith("user_"))(create_callback_handler(chosen_group))
-    # bot.callback_query_handler(func=lambda call: call.data.startswith("deleteUser_"))(deleteUser(chosen_group))
-
-
 
 # Обработка кнопок Назад
 @bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_creating_group",
