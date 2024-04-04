@@ -13,7 +13,7 @@ chooseGroupButton = types.InlineKeyboardButton(text="Выбрать", callback_d
 backButtonFromManageGroupTOMain = types.InlineKeyboardButton(text='Назад', callback_data="Back_to_main_menu_from_manage_group")
 
 deleteGroup = types.InlineKeyboardButton(text="Удалить нахуй", callback_data="deleteGroup")
-deleteUser = types.InlineKeyboardButton(text="Удалить нахуй", callback_data="deleteUser")
+
 
 
 backButtonFromChosenGroupToChoose = types.InlineKeyboardButton(text="Назад", callback_data="backButtonFromChosenGroupToChoose")

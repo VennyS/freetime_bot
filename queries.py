@@ -231,3 +231,33 @@ def getUsernameAndFirstnameFromUser(telegramid):
     # Отдаем подключение обратно в пулл
     finally:
         pool.put_connection(conn)
+
+def existsAdminIdWithId(telegramid, groupname):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    # Пробуем сделать запрос
+    try:
+        cursor.execute(f"SELECT EXISTS(SELECT 1 FROM view_team WHERE telegramid = {telegramid} AND name = '{groupname}')")
+        list_of_users_groups = cursor.fetchall()
+        return list_of_users_groups
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        print(e)
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
+
+def deleteUserFromAdmin(telegramid, gpoupname):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f"DELETE FROM view_member WHERE telegramid = {telegramid} AND name = '{gpoupname}'")
+        conn.commit()
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        print(e)
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
