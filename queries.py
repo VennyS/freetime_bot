@@ -216,7 +216,7 @@ def getGroupNameFromHash(hash):
         pool.put_connection(conn)
 
 
-def getUsernameAndFirstnameFromUser(telegramid):
+def getFirstnameAndNicknameFromUser(telegramid):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
@@ -238,7 +238,7 @@ def existsAdminIdWithId(telegramid, groupname):
     # Пробуем сделать запрос
     try:
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM view_team WHERE telegramid = {telegramid} AND name = '{groupname}')")
-        list_of_users_groups = cursor.fetchall()
+        list_of_users_groups = cursor.fetchone()
         return list_of_users_groups
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
@@ -254,6 +254,37 @@ def deleteUserFromAdmin(telegramid, gpoupname):
     try:
         cursor.execute(f"DELETE FROM view_member WHERE telegramid = {telegramid} AND name = '{gpoupname}'")
         conn.commit()
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        print(e)
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
+
+def deleteGroup(gpoupname):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f"DELETE FROM view_member WHERE name = '{gpoupname}'")
+        cursor.execute(f"DELETE FROM team WHERE name = '{gpoupname}'")
+        conn.commit()
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        print(e)
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
+
+def existsGroupFromId(telegramid):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    # Пробуем сделать запрос
+    try:
+        cursor.execute(f"SELECT EXISTS(SELECT 1 FROM view_member WHERE telegramid = {telegramid})")
+        list_of_users_groups = cursor.fetchone()
+        return list_of_users_groups
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
         print(e)

@@ -65,10 +65,25 @@ def handle_join_answer(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('deleteUser_'))
 def deleteUser(call):
     userId = call.data.split('_')[1]
+    user_firstname = queries.getFirstnameAndNicknameFromUser(userId)[0][0]
+    print(user_firstname)
     groupname = call.data.split('_')[2]
     adminId = call.from_user.id
-    if queries.existsAdminIdWithId(int(adminId), groupname):
+    if queries.existsAdminIdWithId(int(adminId), groupname)[0]:
         queries.deleteUserFromAdmin(int(userId), groupname)
+        keyboard = types.InlineKeyboardMarkup()
+        back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(
+            text=f"Вернуться к группе {groupname}",
+            callback_data=f"backGroup_{groupname}")
+        backButtonFromDeleteUserToChooseGroup = types.InlineKeyboardButton(text='Выбрать другую группу',
+                                                                     callback_data="backButtonFromChosenGroupToChoose")
+        keyboard.add(back_button_from_chosen_user_to_list_of_users, backButtonFromDeleteUserToChooseGroup)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text=f'Пользователь {user_firstname} успешно удалён',
+            reply_markup=keyboard
+        )
 
 # Метод проверки и регистрации пользователя
 def register(message):
@@ -237,7 +252,7 @@ def handle_choose_group_callback(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("user_"))
 def handle_member_actions(call):
     chosen_userid, groupname = call.data.split('_')[1:3]
-    chosen_user_username_firstname = queries.getUsernameAndFirstnameFromUser(chosen_userid)
+    chosen_user_username_firstname = queries.getFirstnameAndNicknameFromUser(chosen_userid)
 
     keyboard = types.InlineKeyboardMarkup()
     back_button_from_chosen_user_to_list_of_users = types.InlineKeyboardButton(text="Назад",
@@ -285,22 +300,64 @@ def handle_chosen_group_callback(call):
     chosen_group = call.data.split('_')[1]
     user_list = queries.get_user_list_of_group(chosen_group)
     admin_id = queries.get_Admin_First_Name(chosen_group)
-
     # Список пользователей группы без админа
     formatted_user_list = [item for item in user_list if item != admin_id]
     keyboard = types.InlineKeyboardMarkup()
+    deleteGroupButton = types.InlineKeyboardButton(text='Удалить группу', callback_data=f'deleteGroup_{chosen_group}')
     keyboard.add(types.InlineKeyboardButton(f"{admin_id[0]} - админ", callback_data=f"user_{admin_id[1]}_{chosen_group}"))
 
     for user in formatted_user_list:
         keyboard.add(types.InlineKeyboardButton(user[0], callback_data=f"user_{user[1]}_{chosen_group}"))
+    # Условие если админ
+    userid = call.from_user.id
+    print(queries.existsAdminIdWithId(userid, chosen_group)[0])
+    # Проверка на админа
+    if queries.existsAdminIdWithId(userid, chosen_group)[0]:
+        keyboard.add(deleteGroupButton, keyboardsButtons.backButtonFromChosenGroupToChoose)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f'Пользователи группы «{chosen_group}»: \n',
+            reply_markup=keyboard
+        )
+    else:
+        keyboard.add(keyboardsButtons.backButtonFromChosenGroupToChoose)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f'Пользователи группы «{chosen_group}»: \n',
+            reply_markup=keyboard
+        )
 
-    keyboard.add(keyboardsButtons.backButtonFromChosenGroupToChoose)
-    bot.edit_message_text(
-        chat_id=call.message.chat.id,
-        message_id=call.message.message_id,
-        text=f'Пользователи группы «{chosen_group}»: \n',
-        reply_markup=keyboard
-    )
+@bot.callback_query_handler(func=lambda call: call.data.startswith('deleteGroup_'))
+def deleteGroup(call):
+    chosen_group = call.data.split('_')[1]
+    queries.deleteGroup(chosen_group)
+    # Проверка, остались ли группы, где состоит пользователь
+    if queries.existsGroupFromId(call.from_user.id)[0]:
+        keyboard = types.InlineKeyboardMarkup()
+        backButtonFromDeleteGroupToChooseGroup = types.InlineKeyboardButton(text='Вернуться к группам',
+                                                                       callback_data="backButtonFromChosenGroupToChoose")
+        keyboard.add(backButtonFromDeleteGroupToChooseGroup)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text=f'Группа {chosen_group} успешно удалена',
+            reply_markup=keyboard
+        )
+    else:
+        keyboard = types.InlineKeyboardMarkup()
+        backButtonFromDeleteGroupToMainMenu = types.InlineKeyboardButton(text='Вернуться в меню',
+                                                                       callback_data="Back_to_main_menu_from_manage_group")
+        ButtonToCreateGroup = types.InlineKeyboardButton(text='Создать новую группу', callback_data='CreateGroup')
+        keyboard.add(ButtonToCreateGroup, backButtonFromDeleteGroupToMainMenu)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text=f'У тебя не осталось групп, в которых ты состоишь',
+            reply_markup=keyboard
+        )
+
 
 # Обработка кнопок Назад
 @bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_creating_group",
