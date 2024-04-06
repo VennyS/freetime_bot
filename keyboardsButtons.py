@@ -9,7 +9,7 @@ createGroupButton = types.InlineKeyboardButton(text="Создать новую",
 backButtonFromCreatingGroupToMain = types.InlineKeyboardButton(text="Назад",
                                                                callback_data="Back_to_main_menu_from_creating_group")
 
-chooseGroupButton = types.InlineKeyboardButton(text="Выбрать", callback_data="chooseGroup")
+chooseGroupButton = types.InlineKeyboardButton(text="Группы", callback_data="chooseGroup")
 backButtonFromManageGroupTOMain = types.InlineKeyboardButton(text='Назад', callback_data="Back_to_main_menu_from_manage_group")
 
 backButtonFromChosenGroupToChoose = types.InlineKeyboardButton(text="Назад", callback_data="backButtonFromChosenGroupToChoose")

@@ -7,7 +7,7 @@ def GoBack(call):
     match(call.data):
         case 'Back_to_main_menu_from_manage_group':
             keyboard = types.InlineKeyboardMarkup()
-            keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.manageGroupsButton)
+            keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.chooseGroupButton)
             bot.edit_message_text(
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,

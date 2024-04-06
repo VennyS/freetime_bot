@@ -48,7 +48,6 @@ def is_team_exists(groupname_hash, pool=pool):
     try:
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM team WHERE hash = '{groupname_hash}')")
         isExist = cursor.fetchone()[0]
-        print(isExist)
         return isExist
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
@@ -128,24 +127,24 @@ def createGroup(name, first_name, telegramid, pool=pool):
 
 
 # Получаем все группы в которых состоит пользователь
-def get_groups_list_of_user_with_hash(telegramid, pool=pool):
-    conn = pool.get_connection()
-    cursor = conn.cursor()
-    # Пробуем сделать запрос
-    try:
-        cursor.execute(f"SELECT team.name, team.hash "
-                       f"FROM team JOIN member ON team.id = member.teamid "
-                       f"JOIN user_info ON member.userid = user_info.id "
-                       f"WHERE user_info.telegramid = {telegramid};")
-        list_of_users_groups_with_hash = cursor.fetchall()
-        return list_of_users_groups_with_hash
-    # Если появилась ошибка, то возвращаем ошибку
-    except Exception as e:
-        print(e)
-        return e
-    # Отдаем подключение обратно в пулл
-    finally:
-        pool.put_connection(conn)
+# def get_groups_list_of_user_with_hash(telegramid, pool=pool):
+#     conn = pool.get_connection()
+#     cursor = conn.cursor()
+#     # Пробуем сделать запрос
+#     try:
+#         cursor.execute(f"SELECT team.name, team.hash "
+#                        f"FROM team JOIN member ON team.id = member.teamid "
+#                        f"JOIN user_info ON member.userid = user_info.id "
+#                        f"WHERE user_info.telegramid = {telegramid};")
+#         list_of_users_groups_with_hash = cursor.fetchall()
+#         return list_of_users_groups_with_hash
+#     # Если появилась ошибка, то возвращаем ошибку
+#     except Exception as e:
+#         print(e)
+#         return e
+#     # Отдаем подключение обратно в пулл
+#     finally:
+#         pool.put_connection(conn)
 
 
 def get_groups_list_of_user(telegramid, pool=pool):
@@ -285,6 +284,20 @@ def existsGroupFromId(telegramid):
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM view_member WHERE telegramid = {telegramid})")
         list_of_users_groups = cursor.fetchone()
         return list_of_users_groups
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        print(e)
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
+
+def leaveinGroup(telegramid, gpoupname):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f"DELETE FROM view_member WHERE telegramid = {telegramid} and name = '{gpoupname}'")
+        conn.commit()
     # Если появилась ошибка, то возвращаем ошибку
     except Exception as e:
         print(e)

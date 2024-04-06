@@ -13,7 +13,7 @@ bot = telebot.TeleBot(data.token)
 # ЕСТЬ ВОПРОСЫ! (Возможно, третья кнопка с выводом общих интервалов добавится)
 def send_main_keyboard(chat_id):
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.manageGroupsButton)
+    keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.chooseGroupButton)
     bot.send_message(chat_id, "Выберите действие:", reply_markup=keyboard)
 
 
@@ -35,7 +35,8 @@ def handle_join_answer(call):
             match response:
                 case "Вступил":
                     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                          text=f"Вы успешно вступили в группу «{groupname}»")
+                                          text=f"Вы успешно вступили в группу «[{groupname}]({funcAndData.generateLink(queries.md5_lower_32bit(groupname))})»",
+                                          parse_mode="Markdown")
 
                 case "Ошибка":
                     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
@@ -54,19 +55,10 @@ def handle_join_answer(call):
                                 text=f"Вы отклонили предложение на вступление в группу — «{groupname}»")
         send_main_keyboard(call.message.chat.id)
 
-# # Обработчик колбэк запроса с параметром группы
-# def create_callback_handler(groupname):
-#     # Функция обработки колбэк запроса
-#     print(groupname)
-#     def handle_callback(call):
-
-        
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith('deleteUser_'))
 def deleteUser(call):
     userId = call.data.split('_')[1]
     user_firstname = queries.getFirstnameAndNicknameFromUser(userId)[0][0]
-    print(user_firstname)
     groupname = call.data.split('_')[2]
     adminId = call.from_user.id
     if queries.existsAdminIdWithId(int(adminId), groupname)[0]:
@@ -141,13 +133,17 @@ def handle_start(message):
     if len(args) > 1:
         # Получаем параметр
         # Проверка если пользователь уже состоит в этой группе
-        groupname = queries.getGroupNameFromHash(args[1])
+        if queries.is_team_exists(args[1]):
+            groupname = queries.getGroupNameFromHash(args[1])
 
-        if not queries.is_user_joined(message.from_user.id, groupname):
-            send_entery_group_keyboard(message.chat.id, groupname)
+            if not queries.is_user_joined(message.from_user.id, groupname):
+                send_entery_group_keyboard(message.chat.id, groupname)
 
+            else:
+                bot.send_message(message.chat.id, f'Вы уже состоите в группе "{groupname}"')
+                send_main_keyboard(message.chat.id)
         else:
-            bot.send_message(message.chat.id, f'Вы уже состоите в группе "{groupname}"')
+            bot.send_message(message.chat.id, "Такой группы не существует, либо вы перешли по несуществующей ссылке")
             send_main_keyboard(message.chat.id)
     # Если /start без ссылки
     else:
@@ -171,39 +167,39 @@ def send_help(message):
 # def handle_info_callback(call):
 #     bot.send_message(call.message.chat.id, "Список групп с ссылками, а также какая либо служебная информаци")
 
-@bot.callback_query_handler(func=lambda call: call.data in ["ManageGroups", "Back_to_main_menu_from_creating_group"])
-def handle_manage_group_callback(call):
-    keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.chooseGroupButton,
-                 keyboardsButtons.backButtonFromManageGroupTOMain)
-
-    # Преобразование списка в строку формата "название группы - ссылка"
-    formatted_groups = funcAndData.get_list_of_groups_with_links_from_db_of_user(call.from_user.id)
-
-    # Отправка сообщения с отформатированным списком групп, либо сообщение об отсутствие групп
-    if formatted_groups:
-        bot.edit_message_text(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-            text=f'Это группы, в которых ты состоишь:\n{formatted_groups}',
-            reply_markup=keyboard
-        )
-    else:
-        keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromManageGroupTOMain)
-        bot.edit_message_text(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-            text='Ты пока не состоишь в какой-либо группе',
-            reply_markup=keyboard
-        )
+# @bot.callback_query_handler(func=lambda call: call.data in ["ManageGroups", "Back_to_main_menu_from_creating_group"])
+# def handle_manage_group_callback(call):
+#     keyboard = types.InlineKeyboardMarkup()
+#     keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.chooseGroupButton,
+#                  keyboardsButtons.backButtonFromManageGroupTOMain)
+#
+#     # Преобразование списка в строку формата "название группы - ссылка"
+#     formatted_groups = funcAndData.get_list_of_groups_with_links_from_db_of_user(call.from_user.id)
+#
+#     # Отправка сообщения с отформатированным списком групп, либо сообщение об отсутствие групп
+#     if formatted_groups:
+#         bot.edit_message_text(
+#             chat_id=call.message.chat.id,
+#             message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+#             text=f'Это группы, в которых ты состоишь:\n{formatted_groups}',
+#             reply_markup=keyboard
+#         )
+#     else:
+#         keyboard = types.InlineKeyboardMarkup()
+#         keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromManageGroupTOMain)
+#         bot.edit_message_text(
+#             chat_id=call.message.chat.id,
+#             message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+#             text='Ты пока не состоишь в какой-либо группе',
+#             reply_markup=keyboard
+#         )
 
 
 # Обработчик колбэка на создание новой группы
 @bot.callback_query_handler(func=lambda call: call.data in ["CreateGroup"])
 def handle_create_group_callback(call):
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(keyboardsButtons.backButtonFromCreatingGroupToMain)
+    keyboard.add(keyboardsButtons.backButtonFromChosenGroupToChoose)
     # Сообщение пользователя, которое передается в validTeamName
     mesg = bot.edit_message_text(
         chat_id=call.message.chat.id,
@@ -219,9 +215,9 @@ def valid_team_name(message):
         queries.createGroup(message.text, message.from_user.first_name, message.from_user.id)
         # добавляем пользователя в группу после её создания
         queries.registerInGroup(message.from_user.id, message.text)
-        bot.send_message(message.chat.id, f"Группа с именем «{message.text}» создана "
-                                          f"\nСсылка на вступления в группу:"
-                                          f" {funcAndData.generateLink(queries.md5_lower_32bit(message.text))}")
+        bot.send_message(message.chat.id,
+                         f"Группа с именем [{message.text}]({funcAndData.generateLink(queries.md5_lower_32bit(message.text))}) создана ",
+                         parse_mode="Markdown")
         send_main_keyboard(message.chat.id)
     else:
         keyboard = types.InlineKeyboardMarkup()
@@ -233,18 +229,28 @@ def valid_team_name(message):
 # Обработчик нажатия на кнопку Выбрать, то есть выбор группы для дальнейших действий именно с ней
 @bot.callback_query_handler(func=lambda call: call.data in ["chooseGroup", "backButtonFromChosenGroupToChoose"])
 def handle_choose_group_callback(call):
+    bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
     group_list = queries.get_groups_list_of_user(call.from_user.id)
     if group_list:
         formatted_group_list = [item[0] for item in group_list]  # список из строк
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.row_width = 1
+        keyboard.row_width = 2
         for group in formatted_group_list:
             keyboard.add(types.InlineKeyboardButton(group, callback_data=f'group_{group}'))
-        keyboard.add(keyboardsButtons.backButtonFromCreatingGroupToMain)
+        keyboard.add(keyboardsButtons.createGroupButton,keyboardsButtons.backButtonFromManageGroupTOMain)
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
             text=f'Выбери нужную для управления группу:\n',
+            reply_markup=keyboard
+        )
+    else:
+        keyboard = types.InlineKeyboardMarkup()
+        keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromManageGroupTOMain)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text='Ты пока не состоишь в какой-либо группе',
             reply_markup=keyboard
         )
 
@@ -304,29 +310,31 @@ def handle_chosen_group_callback(call):
     formatted_user_list = [item for item in user_list if item != admin_id]
     keyboard = types.InlineKeyboardMarkup()
     deleteGroupButton = types.InlineKeyboardButton(text='Удалить группу', callback_data=f'deleteGroup_{chosen_group}')
+    leaveGroupButton = types.InlineKeyboardButton(text='Выйти из группы', callback_data=f'leaveGroup_{chosen_group}')
     keyboard.add(types.InlineKeyboardButton(f"{admin_id[0]} - админ", callback_data=f"user_{admin_id[1]}_{chosen_group}"))
 
     for user in formatted_user_list:
         keyboard.add(types.InlineKeyboardButton(user[0], callback_data=f"user_{user[1]}_{chosen_group}"))
     # Условие если админ
     userid = call.from_user.id
-    print(queries.existsAdminIdWithId(userid, chosen_group)[0])
     # Проверка на админа
     if queries.existsAdminIdWithId(userid, chosen_group)[0]:
         keyboard.add(deleteGroupButton, keyboardsButtons.backButtonFromChosenGroupToChoose)
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            text=f'Пользователи группы «{chosen_group}»: \n',
-            reply_markup=keyboard
+            text=f"Пользователи группы [{chosen_group}](https://t.me/schledule_bot?start={queries.md5_lower_32bit(chosen_group)}) \n",
+            reply_markup=keyboard,
+            parse_mode="Markdown"
         )
     else:
-        keyboard.add(keyboardsButtons.backButtonFromChosenGroupToChoose)
+        keyboard.add(leaveGroupButton, keyboardsButtons.backButtonFromChosenGroupToChoose)
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            text=f'Пользователи группы «{chosen_group}»: \n',
-            reply_markup=keyboard
+            text=f"Пользователи группы [{chosen_group}](https://t.me/schledule_bot?start={queries.md5_lower_32bit(chosen_group)}) \n",
+            reply_markup=keyboard,
+            parse_mode="Markdown"
         )
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('deleteGroup_'))
@@ -358,10 +366,37 @@ def deleteGroup(call):
             reply_markup=keyboard
         )
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith("leaveGroup_"))
+def leaveinGroup(call):
+    chosen_group = call.data.split('_')[1]
+    userid = call.from_user.id
+    queries.leaveinGroup(userid, chosen_group)
+    if queries.existsGroupFromId(call.from_user.id)[0]:
+        keyboard = types.InlineKeyboardMarkup()
+        backButtonFromDeleteGroupToChooseGroup = types.InlineKeyboardButton(text='Вернуться к группам',
+                                                                       callback_data="backButtonFromChosenGroupToChoose")
+        keyboard.add(backButtonFromDeleteGroupToChooseGroup)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text=f'Вы успешно вышли из группы {chosen_group}',
+            reply_markup=keyboard
+        )
+    else:
+        keyboard = types.InlineKeyboardMarkup()
+        backButtonFromDeleteGroupToMainMenu = types.InlineKeyboardButton(text='Вернуться в меню',
+                                                                       callback_data="Back_to_main_menu_from_manage_group")
+        ButtonToCreateGroup = types.InlineKeyboardButton(text='Создать новую группу', callback_data='CreateGroup')
+        keyboard.add(ButtonToCreateGroup, backButtonFromDeleteGroupToMainMenu)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,  # идентификатор редактируемого сообщения
+            text=f'Вы успешно вышли из группы {chosen_group}, но у вас не осталось групп, в которых вы состоите',
+            reply_markup=keyboard
+        )
 
 # Обработка кнопок Назад
-@bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_creating_group",
-                                                            "Back_to_main_menu_from_manage_group"])
+@bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_manage_group"])
 def handle_go_back_from_creating_group(call):
     bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
     GoBack(call)
