@@ -1,4 +1,5 @@
 import telebot
+from psycopg2._range import DateTimeRange
 from telebot import types
 import data
 from GoBack_methods import *
@@ -6,6 +7,8 @@ from messages import *
 import queries
 import funcAndData
 import keyboardsButtons
+import re
+from datetime import datetime
 
 bot = telebot.TeleBot(data.token)
 
@@ -13,6 +16,7 @@ bot = telebot.TeleBot(data.token)
 # ЕСТЬ ВОПРОСЫ! (Возможно, третья кнопка с выводом общих интервалов добавится)
 def send_main_keyboard(chat_id):
     keyboard = types.InlineKeyboardMarkup()
+
     keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.chooseGroupButton)
     bot.send_message(chat_id, "Выберите действие:", reply_markup=keyboard)
 
@@ -311,6 +315,7 @@ def handle_chosen_group_callback(call):
     keyboard = types.InlineKeyboardMarkup()
     deleteGroupButton = types.InlineKeyboardButton(text='Удалить группу', callback_data=f'deleteGroup_{chosen_group}')
     leaveGroupButton = types.InlineKeyboardButton(text='Выйти из группы', callback_data=f'leaveGroup_{chosen_group}')
+    totalTimeButton = types.InlineKeyboardButton(text='Общее время', callback_data=f'totalTime_{chosen_group}')
     keyboard.add(types.InlineKeyboardButton(f"{admin_id[0]} - админ", callback_data=f"user_{admin_id[1]}_{chosen_group}"))
 
     for user in formatted_user_list:
@@ -319,7 +324,7 @@ def handle_chosen_group_callback(call):
     userid = call.from_user.id
     # Проверка на админа
     if queries.existsAdminIdWithId(userid, chosen_group)[0]:
-        keyboard.add(deleteGroupButton, keyboardsButtons.backButtonFromChosenGroupToChoose)
+        keyboard.add(deleteGroupButton, totalTimeButton, keyboardsButtons.backButtonFromChosenGroupToChoose)
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -328,7 +333,7 @@ def handle_chosen_group_callback(call):
             parse_mode="Markdown"
         )
     else:
-        keyboard.add(leaveGroupButton, keyboardsButtons.backButtonFromChosenGroupToChoose)
+        keyboard.add(leaveGroupButton, totalTimeButton, keyboardsButtons.backButtonFromChosenGroupToChoose)
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -394,6 +399,29 @@ def leaveinGroup(call):
             text=f'Вы успешно вышли из группы {chosen_group}, но у вас не осталось групп, в которых вы состоите',
             reply_markup=keyboard
         )
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('totalTime_'))
+def totalTimeFromPeople(call):
+    chosen_group = call.data.split('_')[1]
+    # time = queries.totalTimeWithGroup(chosen_group)
+    input_string = "(DateTimeRange(datetime.datetime(2024, 3, 24, 12, 0), datetime.datetime(2024, 3, 24, 16, 0), '[]'),)"
+    tuple_of_objects = (DateTimeRange(datetime.datetime(2024, 3, 24, 12, 0), datetime.datetime(2024, 3, 24, 16, 0), '[]'),)
+
+    # Функция для преобразования объекта DateTimeRange в словарь
+    def datetime_range_to_dict(datetime_range):
+        return {
+            "start_datetime": datetime_range.start_datetime,
+            "end_datetime": datetime_range.end_datetime,
+            "bounds": datetime_range.bounds
+        }
+
+    # Создаем список словарей
+    list_of_dicts = [datetime_range_to_dict(obj) for obj in tuple_of_objects]
+
+    # Выводим результат
+    for d in list_of_dicts:
+        print(d)
+
 
 # Обработка кнопок Назад
 @bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_manage_group"])

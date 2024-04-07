@@ -305,3 +305,19 @@ def leaveinGroup(telegramid, gpoupname):
     # Отдаем подключение обратно в пулл
     finally:
         pool.put_connection(conn)
+
+def totalTimeWithGroup(gpoupname):
+    conn = pool.get_connection()
+    cursor = conn.cursor()
+    # Пробуем сделать запрос
+    try:
+        cursor.execute(f"SELECT * FROM find_group_intersections('{gpoupname}')")
+        list_of_users_groups = cursor.fetchone()
+        return list_of_users_groups
+    # Если появилась ошибка, то возвращаем ошибку
+    except Exception as e:
+        print(e)
+        return e
+    # Отдаем подключение обратно в пулл
+    finally:
+        pool.put_connection(conn)
