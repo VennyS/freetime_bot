@@ -34,4 +34,3 @@ db_config = {
 
 # Создание пула подключений
 pool = ConnectionPool(min_conn=1, max_conn=10, **db_config)
-pool.conn_params

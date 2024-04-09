@@ -1,5 +1,4 @@
 import telebot
-from psycopg2._range import DateTimeRange
 from telebot import types
 import data
 from GoBack_methods import *
@@ -7,17 +6,22 @@ from messages import *
 import queries
 import funcAndData
 import keyboardsButtons
-import re
-from datetime import datetime
+from timeIntervals import timeIntervals
 
 bot = telebot.TeleBot(data.token)
 
 # Функция для вывода основного выбора действий
 # ЕСТЬ ВОПРОСЫ! (Возможно, третья кнопка с выводом общих интервалов добавится)
 def send_main_keyboard(chat_id):
-    keyboard = types.InlineKeyboardMarkup()
-
-    keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.chooseGroupButton)
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    if (len(queries.userTime()) > 0):
+        x = timeIntervals(queries.userTime()).hideQuote()
+        print(x)
+        webAppTest = types.WebAppInfo(f"https://vennys.github.io/?&schedule={x}")
+    else: webAppTest = types.WebAppInfo(f"https://vennys.github.io/")
+     #создаем webappinfo - формат хранения url
+    one_butt = types.KeyboardButton(text="Страница с расписанием", web_app=webAppTest) #создаем кнопку типа webapp
+    keyboard.add(one_butt) #добавляем кнопки в клавиатуру
     bot.send_message(chat_id, "Выберите действие:", reply_markup=keyboard)
 
 
@@ -403,24 +407,8 @@ def leaveinGroup(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('totalTime_'))
 def totalTimeFromPeople(call):
     chosen_group = call.data.split('_')[1]
-    # time = queries.totalTimeWithGroup(chosen_group)
-    input_string = "(DateTimeRange(datetime.datetime(2024, 3, 24, 12, 0), datetime.datetime(2024, 3, 24, 16, 0), '[]'),)"
-    tuple_of_objects = (DateTimeRange(datetime.datetime(2024, 3, 24, 12, 0), datetime.datetime(2024, 3, 24, 16, 0), '[]'),)
-
-    # Функция для преобразования объекта DateTimeRange в словарь
-    def datetime_range_to_dict(datetime_range):
-        return {
-            "start_datetime": datetime_range.start_datetime,
-            "end_datetime": datetime_range.end_datetime,
-            "bounds": datetime_range.bounds
-        }
-
-    # Создаем список словарей
-    list_of_dicts = [datetime_range_to_dict(obj) for obj in tuple_of_objects]
-
-    # Выводим результат
-    for d in list_of_dicts:
-        print(d)
+    time = queries.totalTimeWithGroup(chosen_group)
+    print(time)
 
 
 # Обработка кнопок Назад
@@ -436,6 +424,14 @@ def handle_go_back_from_creating_group(call):
 def handle_web_callback(call):
     bot.send_message(call.message.chat.id, "Открытие web приложения")
 
+import json
+
+@bot.message_handler(content_types="web_app_data") #получаем отправленные данные 
+def answer(webAppMes):
+    freetime = timeIntervals(webAppMes.web_app_data.data)
+    queries.insert(freetime.toTSRange())
+    # bot.send_message(webAppMes.chat.id, f"получили инофрмацию из веб-приложения: {webAppMes.web_app_data.data}")
+    bot.send_message(webAppMes.chat.id, "Данные получил!")
 
 # Обработка ввода неизвестного сообщения - ответ бота это список команд
 @bot.message_handler(func=lambda message: True)
@@ -443,7 +439,6 @@ def handle_other_messages(message):
     bot.send_message(message.chat.id,
                      "Эта команда неизвестна. "
                      "Список доступных команд:\n" + "\n".join(funcAndData.available_commands))
-
 
 # Запуск бота
 if __name__ == '__main__':
