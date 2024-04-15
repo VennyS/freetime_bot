@@ -344,7 +344,8 @@ def insert(freetime, pool=pool):
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"INSERT INTO freetime(userid, freetime) VALUES (5, {freetime})")
+        print(f"INSERT INTO freetime(userid, freetime) VALUES (5, {freetime}) ON CONFLICT (id) DO UPDATE SET freetime = {freetime}")
+        cursor.execute(f"INSERT INTO freetime(userid, freetime) VALUES (5, {freetime}) ON CONFLICT (userid) DO UPDATE SET freetime = {freetime};")
         conn.commit()
         return True
     # Если появилась ошибка, то возвращаем ошибку

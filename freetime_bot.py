@@ -13,15 +13,8 @@ bot = telebot.TeleBot(data.token)
 # Функция для вывода основного выбора действий
 # ЕСТЬ ВОПРОСЫ! (Возможно, третья кнопка с выводом общих интервалов добавится)
 def send_main_keyboard(chat_id):
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    if (len(queries.userTime()) > 0):
-        x = timeIntervals(queries.userTime()).hideQuote()
-        print(x)
-        webAppTest = types.WebAppInfo(f"https://vennys.github.io/?&schedule={x}")
-    else: webAppTest = types.WebAppInfo(f"https://vennys.github.io/")
-     #создаем webappinfo - формат хранения url
-    one_butt = types.KeyboardButton(text="Страница с расписанием", web_app=webAppTest) #создаем кнопку типа webapp
-    keyboard.add(one_butt) #добавляем кнопки в клавиатуру
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.chooseGroupButton)
     bot.send_message(chat_id, "Выберите действие:", reply_markup=keyboard)
 
 
@@ -422,9 +415,11 @@ def handle_go_back_from_creating_group(call):
 # Тут вообще пиздец
 @bot.callback_query_handler(func=lambda call: call.data == "Intervals")
 def handle_web_callback(call):
-    bot.send_message(call.message.chat.id, "Открытие web приложения")
-
-import json
+    keyboard = types.InlineKeyboardMarkup()
+    webAppTest = types.WebAppInfo(f"https://freetimebot.ru?&userid={call.from_user.id}")
+    one = types.InlineKeyboardButton(text="Веб приложение", web_app=webAppTest) #создаем кнопку типа webapp
+    keyboard.add(one)
+    bot.send_message(call.message.chat.id, "Выберите действие:", reply_markup=keyboard)
 
 @bot.message_handler(content_types="web_app_data") #получаем отправленные данные 
 def answer(webAppMes):
@@ -441,6 +436,4 @@ def handle_other_messages(message):
                      "Список доступных команд:\n" + "\n".join(funcAndData.available_commands))
 
 # Запуск бота
-if __name__ == '__main__':
-    print(bot.get_me())
-    bot.polling(none_stop=True)
+bot.polling()
