@@ -1,2 +1,4 @@
 telebot
 psycopg2
+quart
+quart_cors
