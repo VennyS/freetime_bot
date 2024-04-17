@@ -1,7 +1,5 @@
 from quart import Quart, request, jsonify
 from quart_cors import cors
-import io
-import json
 
 import queries
 from timeIntervals import timeIntervals
@@ -16,6 +14,9 @@ async def index():
         return jsonify(data)
     return ''
 
+import io
+import json
+
 @app.route('/', methods=['POST'])
 async def post():
     # Читаем данные из запроса
@@ -24,7 +25,6 @@ async def post():
     data_stream = io.BytesIO(data)
     # Декодируем данные в строку
     data_string = data_stream.read().decode('utf-8')
-    
     # Пытаемся преобразовать строку JSON в словарь
     try:
         json_data = json.loads(data_string)

@@ -424,7 +424,7 @@ def handle_web_callback(call):
 @bot.message_handler(content_types="web_app_data") #получаем отправленные данные 
 def answer(webAppMes):
     freetime = timeIntervals(webAppMes.web_app_data.data)
-    queries.insert(freetime.toTSRange())
+    queries.insert(webAppMes.from_user.id, freetime.toTSRange())
     # bot.send_message(webAppMes.chat.id, f"получили инофрмацию из веб-приложения: {webAppMes.web_app_data.data}")
     bot.send_message(webAppMes.chat.id, "Данные получил!")
 

@@ -322,12 +322,12 @@ def totalTimeWithGroup(gpoupname):
     finally:
         pool.put_connection(conn)
 
-def userTime():
+def userTime(telegramid, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        cursor.execute(f"SELECT freetime FROM freetime WHERE userid = 5")
+        cursor.execute(f"SELECT freetime FROM freetime WHERE userid = {telegramid}")
         list_of_users_groups = cursor.fetchall()
         return list_of_users_groups
     # Если появилась ошибка, то возвращаем ошибку
@@ -339,13 +339,13 @@ def userTime():
         pool.put_connection(conn)
 
 # Регистрация пользователя
-def insert(freetime, pool=pool):
+def insert(telegramid, freetime, pool=pool):
     conn = pool.get_connection()
     cursor = conn.cursor()
     # Пробуем сделать запрос
     try:
-        print(f"INSERT INTO freetime(userid, freetime) VALUES (5, {freetime}) ON CONFLICT (id) DO UPDATE SET freetime = {freetime}")
-        cursor.execute(f"INSERT INTO freetime(userid, freetime) VALUES (5, {freetime}) ON CONFLICT (userid) DO UPDATE SET freetime = {freetime};")
+        print(f"INSERT INTO freetime(userid, freetime) VALUES ({telegramid}, {freetime}) ON CONFLICT (id) DO UPDATE SET freetime = {freetime}")
+        cursor.execute(f"INSERT INTO freetime(userid, freetime) VALUES ({telegramid}, {freetime}) ON CONFLICT (userid) DO UPDATE SET freetime = {freetime};")
         conn.commit()
         return True
     # Если появилась ошибка, то возвращаем ошибку
