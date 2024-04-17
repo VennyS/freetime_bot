@@ -22,4 +22,4 @@ CREATE TABLE freetime (
 	id SERIAL PRIMARY KEY,
 	userid INTEGER REFERENCES user_info(id) ON DELETE CASCADE ON UPDATE CASCADE,
 	freetime tsrange[]
-)
+);

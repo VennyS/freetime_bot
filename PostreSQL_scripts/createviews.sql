@@ -14,8 +14,3 @@ CREATE VIEW view_team AS
 SELECT team.name, user_info.first_name, user_info.telegramid, team.hash
 FROM team
 LEFT JOIN user_info ON user_info.id = team.adminid;
-
-
-
-
-

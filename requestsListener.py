@@ -1,5 +1,7 @@
 from quart import Quart, request, jsonify
 from quart_cors import cors
+import io
+import json
 
 import queries
 from timeIntervals import timeIntervals
@@ -16,19 +18,26 @@ async def index():
 
 @app.route('/', methods=['POST'])
 async def post():
-    # Проверяем, что в запросе присутствует JSON-строка
-    if request.is_json:
-        # Получаем JSON-строку из запроса
-        json_data = await request.get_json()
-        
-        # Здесь вы можете выполнить любую логику обработки полученных данных
-        # В этом примере предполагается, что вы используете JSON-строку напрямую
-        data = timeIntervals(json_data)
-        queries.insert(data.toTSRange())
-        return 'Insert complete', 200
-    else:
-        # Возвращаем ошибку, если запрос не содержит JSON-строку
-        return jsonify({'error': 'Request must contain JSON data'}), 400
+    # Читаем данные из запроса
+    data = await request.data
+    # Создаем файлоподобный объект io.BytesIO для чтения данных
+    data_stream = io.BytesIO(data)
+    # Декодируем данные в строку
+    data_string = data_stream.read().decode('utf-8')
+    
+    # Пытаемся преобразовать строку JSON в словарь
+    try:
+        json_data = json.loads(data_string)
+    except json.JSONDecodeError:
+        # Если данные не являются корректной JSON строкой, возвращаем ошибку
+        return jsonify({'error': 'Invalid JSON data'}), 400
+
+    # Здесь вы можете выполнить любую логику обработки полученных данных
+    # В этом примере предполагается, что вы используете данные напрямую
+    data = timeIntervals(json_data)
+    queries.insert(data.toTSRange())
+
+    return 'Insert complete', 200
 
 def start():
     app.run(port=5000)  # Установите порт на 5000
