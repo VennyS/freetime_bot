@@ -10,26 +10,35 @@ class timeIntervals:
         8: "Сентябрь", 9: "Октябрь",  10: "Ноябрь"
     }
 
-    def __init__(self, timeRange: list[tuple] | list[dict] | str):
+    def __init__(self, timeRange: tuple[int, list] | list[int, dict] | str):
         self.intervals = []
-        if len(timeRange):
-            if isinstance(timeRange, list) or isinstance(timeRange, str):
-                if isinstance(timeRange[0], tuple):
-                    for tup in timeRange:
-                        for interval in tup[0]:
-                            self.intervals.append(interval)
-                elif isinstance(timeRange[0], dict) or isinstance(timeRange[0], str):
-                    if isinstance(timeRange, str): timeRange = json.loads(timeRange)
-                    for item in timeRange:
-                        start_time_str = f"{item['year']}-{item['month']}-{item['day']} {item['startTime']}"
-                        end_time_str = f"{item['year']}-{item['month']}-{item['day']} {item['endTime']}"
-                        start_time = datetime.datetime.strptime(start_time_str, "%Y-%m-%d %H:%M")
-                        end_time = datetime.datetime.strptime(end_time_str, "%Y-%m-%d %H:%M")
-                        datetime_range = DateTimeRange(start_time, end_time, bounds='[]')
-                        self.intervals.append(datetime_range)
-                else: raise ValueError('Внутренний формат данных списка не распознан')
-            else: raise ValueError('Тип данных должен быть либо списком с кортежами, либо списком с словарями')
-        else: return
+        if isinstance(timeRange, tuple):
+            if (isinstance(timeRange[1], list)):
+                for interval in timeRange[1]:
+                    self.intervals.append(interval)
+                self.telegramid = timeRange[0]
+            else: raise ValueError('Внутренний формат данных кортежа не распознан')
+        elif isinstance(timeRange, list): 
+            if (isinstance(timeRange[1], dict)):
+                for interval in timeRange[1:]:
+                    start_time_str = f"{interval['year']}-{interval['month']}-{interval['day']} {interval['startTime']}"
+                    # Проверяем, если endTime равно 24
+                    if interval['endTime'] == "24:00":
+                        # Увеличиваем день на 1 и устанавливаем startTime в полночь
+                        next_day = datetime.datetime(int(interval['year']), int(interval['month']), int(interval['day'])) + datetime.timedelta(days=1)
+                        end_time_str = f"{next_day.year}-{next_day.month}-{next_day.day} 00:00"
+                    else:
+                        end_time_str = f"{interval['year']}-{interval['month']}-{interval['day']} {interval['endTime']}"
+
+                    start_time = datetime.datetime.strptime(start_time_str, "%Y-%m-%d %H:%M")
+                    end_time = datetime.datetime.strptime(end_time_str, "%Y-%m-%d %H:%M")
+                    datetime_range = DateTimeRange(start_time, end_time, bounds='[]')
+                    self.intervals.append(datetime_range)
+
+                self.telegramid = timeRange[0]
+            else: raise ValueError('Внутренний формат данных списка не распознан')
+        elif timeRange is None: return
+        else: raise ValueError('Тип данных не соответствует спецификации')
         
     def __iter__(self):
         self.index = 0
@@ -50,11 +59,12 @@ class timeIntervals:
             for interval in self.intervals:
                 interval_dict = {
                     "year": interval.lower.year,
-                    "month": interval.lower.month,
+                    "month": interval.lower.month-1,
                     "day": interval.lower.day,
-                    "name": self.monthsDict[interval.lower.month],
+                    "name": self.monthsDict[interval.lower.month-1],
                     "startTime": f"{interval.lower.hour:02d}:{interval.lower.minute:02d}",
-                    "endTime": f"{interval.upper.hour:02d}:{interval.upper.minute:02d}"
+                    "endTime": f"{interval.upper.hour:02d}:{interval.upper.minute:02d}" if interval.upper.hour != 0 else
+                    "24:00"
                 }
                 jsonMass.append(interval_dict)
             separators = (', ', ': ') if inARow else None
@@ -80,7 +90,7 @@ class timeIntervals:
 
         return escaped_json_string
     
-    def toTSRange(self):
+    def intervalsToTSRange(self):
         freetime_str = ','.join([f"'[{item.lower},{item.upper}]'::tsrange" for item in self.intervals])
         # Формируем массив для PostgreSQL
         freetime_array = f"ARRAY[{freetime_str}]"

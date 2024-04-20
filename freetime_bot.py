@@ -1,21 +1,20 @@
 import telebot
 from telebot import types
 import data
-from GoBack_methods import *
 from messages import *
-import queries
 import funcAndData
+import queries
 import keyboardsButtons
-from timeIntervals import timeIntervals
 
 bot = telebot.TeleBot(data.token)
 
 # Функция для вывода основного выбора действий
-# ЕСТЬ ВОПРОСЫ! (Возможно, третья кнопка с выводом общих интервалов добавится)
-def send_main_keyboard(chat_id):
+def send_main_keyboard(message):
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.chooseGroupButton)
-    bot.send_message(chat_id, "Выберите действие:", reply_markup=keyboard)
+    webApp = types.WebAppInfo(f"https://freetimebot.ru?&userid={message.from_user.id}")
+    webAppButton = types.InlineKeyboardButton(text="Веб приложение", web_app=webApp) #создаем кнопку типа webapp
+    keyboard.add(webAppButton, keyboardsButtons.chooseGroupButton)
+    bot.send_message(message.chat.id, "Выберите действие:", reply_markup=keyboard)
 
 
 # Клавиатура для вступления в группу
@@ -50,11 +49,11 @@ def handle_join_answer(call):
                 case "Отсутствует":
                     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                           text="Такая группа либо не существует, либо уже удалена")
-            send_main_keyboard(call.message.chat.id)
+            send_main_keyboard(call.message)
     else:
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                 text=f"Вы отклонили предложение на вступление в группу — «{groupname}»")
-        send_main_keyboard(call.message.chat.id)
+        send_main_keyboard(call.message)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('deleteUser_'))
 def deleteUser(call):
@@ -112,6 +111,21 @@ def is_team_exist_and_user_in_it(call, groupname_hash):
     else:
         return "Отсутствует"
 
+# Проверка существование группы
+def valid_team_name(message):
+    if not queries.is_team_exists(funcAndData.md5_lower_32bit(message.text)):
+        queries.createGroup(message.text, message.from_user.first_name, message.from_user.id)
+        # добавляем пользователя в группу после её создания
+        queries.registerInGroup(message.from_user.id, message.text)
+        bot.send_message(message.chat.id,
+                         f"Группа с именем [{message.text}]({funcAndData.generateLink(funcAndData.md5_lower_32bit(message.text))}) создана ",
+                         parse_mode="Markdown")
+        send_main_keyboard(message)
+    else:
+        keyboard = types.InlineKeyboardMarkup()
+        keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromCreatingGroupToMain)
+        bot.send_message(message.chat.id,
+                         f"Группа с именем «{message.text}» уже существует. Попробуйте ещё раз", reply_markup=keyboard)
 
 # Обработчик команды /start или перехода по ссылке
 # Есть вопросы! Надо обработать любой текст сюда же
@@ -142,10 +156,10 @@ def handle_start(message):
 
             else:
                 bot.send_message(message.chat.id, f'Вы уже состоите в группе "{groupname}"')
-                send_main_keyboard(message.chat.id)
+                send_main_keyboard(message)
         else:
             bot.send_message(message.chat.id, "Такой группы не существует, либо вы перешли по несуществующей ссылке")
-            send_main_keyboard(message.chat.id)
+            send_main_keyboard(message)
     # Если /start без ссылки
     else:
         bot.reply_to(message, HELLO_MESSAGE)
@@ -153,7 +167,7 @@ def handle_start(message):
         if first_time:
             send_help(message)
 
-        send_main_keyboard(message.chat.id)
+        send_main_keyboard(message)
 
 
 # Обработчик команды /help
@@ -161,71 +175,18 @@ def handle_start(message):
 def send_help(message):
     bot.send_message(message.chat.id, HELP_MESSAGE)
 
-
-# Обработчик колбэк запроса на кнопу info
-# Надо доработать
-# @bot.callback_query_handler(func=lambda call: call.data == "Info")
-# def handle_info_callback(call):
-#     bot.send_message(call.message.chat.id, "Список групп с ссылками, а также какая либо служебная информаци")
-
-# @bot.callback_query_handler(func=lambda call: call.data in ["ManageGroups", "Back_to_main_menu_from_creating_group"])
-# def handle_manage_group_callback(call):
-#     keyboard = types.InlineKeyboardMarkup()
-#     keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.chooseGroupButton,
-#                  keyboardsButtons.backButtonFromManageGroupTOMain)
-#
-#     # Преобразование списка в строку формата "название группы - ссылка"
-#     formatted_groups = funcAndData.get_list_of_groups_with_links_from_db_of_user(call.from_user.id)
-#
-#     # Отправка сообщения с отформатированным списком групп, либо сообщение об отсутствие групп
-#     if formatted_groups:
-#         bot.edit_message_text(
-#             chat_id=call.message.chat.id,
-#             message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-#             text=f'Это группы, в которых ты состоишь:\n{formatted_groups}',
-#             reply_markup=keyboard
-#         )
-#     else:
-#         keyboard = types.InlineKeyboardMarkup()
-#         keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromManageGroupTOMain)
-#         bot.edit_message_text(
-#             chat_id=call.message.chat.id,
-#             message_id=call.message.message_id,  # идентификатор редактируемого сообщения
-#             text='Ты пока не состоишь в какой-либо группе',
-#             reply_markup=keyboard
-#         )
-
-
 # Обработчик колбэка на создание новой группы
 @bot.callback_query_handler(func=lambda call: call.data in ["CreateGroup"])
 def handle_create_group_callback(call):
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(keyboardsButtons.backButtonFromChosenGroupToChoose)
     # Сообщение пользователя, которое передается в validTeamName
-    mesg = bot.edit_message_text(
+    message = bot.edit_message_text(
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
         text=TEAM_NAME_MESSAGE,
         reply_markup=keyboard)
-    bot.register_next_step_handler(mesg, valid_team_name)
-
-
-# Проверка существование группы
-def valid_team_name(message):
-    if not queries.is_team_exists(queries.md5_lower_32bit(message.text)):
-        queries.createGroup(message.text, message.from_user.first_name, message.from_user.id)
-        # добавляем пользователя в группу после её создания
-        queries.registerInGroup(message.from_user.id, message.text)
-        bot.send_message(message.chat.id,
-                         f"Группа с именем [{message.text}]({funcAndData.generateLink(queries.md5_lower_32bit(message.text))}) создана ",
-                         parse_mode="Markdown")
-        send_main_keyboard(message.chat.id)
-    else:
-        keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromCreatingGroupToMain)
-        bot.send_message(message.chat.id,
-                         f"Группа с именем «{message.text}» уже существует. Попробуйте ещё раз", reply_markup=keyboard)
-
+    bot.register_next_step_handler(message, valid_team_name)
 
 # Обработчик нажатия на кнопку Выбрать, то есть выбор группы для дальнейших действий именно с ней
 @bot.callback_query_handler(func=lambda call: call.data in ["chooseGroup", "backButtonFromChosenGroupToChoose"])
@@ -237,8 +198,8 @@ def handle_choose_group_callback(call):
         keyboard = types.InlineKeyboardMarkup()
         keyboard.row_width = 2
         for group in formatted_group_list:
-            keyboard.add(types.InlineKeyboardButton(group, callback_data=f'group_{group}'))
-        keyboard.add(keyboardsButtons.createGroupButton,keyboardsButtons.backButtonFromManageGroupTOMain)
+            keyboard.add(types.InlineKeyboardButton(text=group, callback_data=f'group_{group}'))
+        keyboard.add(keyboardsButtons.createGroupButton,keyboardsButtons.backButtonFromManageGroupToMain)
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -247,7 +208,7 @@ def handle_choose_group_callback(call):
         )
     else:
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromManageGroupTOMain)
+        keyboard.add(keyboardsButtons.createGroupButton, keyboardsButtons.backButtonFromManageGroupToMain)
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,  # идентификатор редактируемого сообщения
@@ -401,31 +362,22 @@ def leaveinGroup(call):
 def totalTimeFromPeople(call):
     chosen_group = call.data.split('_')[1]
     time = queries.totalTimeWithGroup(chosen_group)
-    print(time)
 
 
 # Обработка кнопок Назад
 @bot.callback_query_handler(func=lambda call: call.data in ["Back_to_main_menu_from_manage_group"])
 def handle_go_back_from_creating_group(call):
     bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
-    GoBack(call)
-
-
-# Обработчик колбэка на нажатия на кнопку редактирнования интервалов
-# Тут вообще пиздец
-@bot.callback_query_handler(func=lambda call: call.data == "Intervals")
-def handle_web_callback(call):
     keyboard = types.InlineKeyboardMarkup()
-    webAppTest = types.WebAppInfo(f"https://freetimebot.ru?&userid={call.from_user.id}")
-    one = types.InlineKeyboardButton(text="Веб приложение", web_app=webAppTest) #создаем кнопку типа webapp
-    keyboard.add(one)
-    bot.send_message(call.message.chat.id, "Выберите действие:", reply_markup=keyboard)
+    keyboard.add(keyboardsButtons.intervalsEditingButton, keyboardsButtons.chooseGroupButton)
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=f'Выберите действие:',
+        reply_markup=keyboard)
 
 @bot.message_handler(content_types="web_app_data") #получаем отправленные данные 
 def answer(webAppMes):
-    freetime = timeIntervals(webAppMes.web_app_data.data)
-    queries.insert(webAppMes.from_user.id, freetime.toTSRange())
-    # bot.send_message(webAppMes.chat.id, f"получили инофрмацию из веб-приложения: {webAppMes.web_app_data.data}")
     bot.send_message(webAppMes.chat.id, "Данные получил!")
 
 # Обработка ввода неизвестного сообщения - ответ бота это список команд
@@ -434,6 +386,7 @@ def handle_other_messages(message):
     bot.send_message(message.chat.id,
                      "Эта команда неизвестна. "
                      "Список доступных команд:\n" + "\n".join(funcAndData.available_commands))
+    
 
 # Запуск бота
 bot.polling()

@@ -4,19 +4,22 @@ from quart_cors import cors
 import queries
 from timeIntervals import timeIntervals
 
-app = Quart(__name__)
-app = cors(app)
-
-@app.route('/', methods=['GET'])
-async def index():
-    data = timeIntervals(queries.userTime()).allToJSON(True)
-    if data:
-        return jsonify(data)
-    return ''
-
 import io
 import json
 
+app = Quart(__name__)
+app = cors(app)
+
+# Изменить с учетом telegramid
+@app.route('/', methods=['GET'])
+async def index():
+    telegramid = request.args.get('telegramid')
+    data = timeIntervals(queries.userTime(telegramid)).allToJSON(True)
+    if data:
+        return jsonify(data)
+    return 'null'
+
+# Изменить с учетом telegramid
 @app.route('/', methods=['POST'])
 async def post():
     # Читаем данные из запроса
@@ -35,7 +38,7 @@ async def post():
     # Здесь вы можете выполнить любую логику обработки полученных данных
     # В этом примере предполагается, что вы используете данные напрямую
     data = timeIntervals(json_data)
-    queries.insert(data.toTSRange())
+    queries.insertIntervals(data.telegramid, data.intervalsToTSRange())
 
     return 'Insert complete', 200
 
